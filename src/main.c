@@ -49,9 +49,9 @@ void isr_display()
 {
     irqDisable(IRQ_VBLANK);
 
-    //Update map scroll
-    REG_BG2X= (112-(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8;
-    REG_BG2Y= (-12-(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
+    //Update map scroll (don't ask me how I found these values)
+    REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8)-128;
+    REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
 
     //Set keypad register
     //  MSB Pw|Ri|Le|Do|Up|C|B|A LSB
@@ -125,9 +125,9 @@ int main()
     ((OBJAFFINE*)OAM)[0].pd= (128*cos_rot)>>8;
     //Set background affine matrix
     REG_BG2PA= (128*cos_rot)>>8;
-    REG_BG2PB= (128*sin_rot)>>8;
+    REG_BG2PB= (-128*sin_rot)>>8;
     REG_BG2PC= (-128*sin_rot)>>8;
-    REG_BG2PD= (128*cos_rot)>>8;
+    REG_BG2PD= (-128*cos_rot)>>8;
     // REG_BG2X= 112*256;
     // REG_BG2Y= -12*256;
 

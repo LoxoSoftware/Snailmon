@@ -49,10 +49,10 @@ void prc_build_palette(int contrast)
 
 void host_vram_write(uint32_t ofs, uint8_t data)
 {
-    GFX_MAP_CHR_ADR[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
-    GFX_MAP_CHR_ADR[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
-    GFX_MAP_CHR_ADR[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
-    GFX_MAP_CHR_ADR[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
+    GFX_MAP_CHR_ADR[ofs*4+3]= (((data>>7)&1)<<8)|((data>>6)&1),
+    GFX_MAP_CHR_ADR[ofs*4+2]= (((data>>5)&1)<<8)|((data>>4)&1),
+    GFX_MAP_CHR_ADR[ofs*4+1]= (((data>>3)&1)<<8)|((data>>2)&1),
+    GFX_MAP_CHR_ADR[ofs*4]= (((data>>1)&1)<<8)|((data)&1);
 }
 
 void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
@@ -106,16 +106,16 @@ void prc_on_spr_addr_change()
             switch ((im>>3)&3) //Fix tile order
             {
                 case 0:
-                    host_vram_write_sprrow_4bpp(GFX_COPY_SZ+(im&0xFFE7)+8, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFE7)+8, ~row_shade, row_mask);
                     break;
                 case 1:
-                    host_vram_write_sprrow_4bpp(GFX_COPY_SZ+(im&0xFFE7), ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFE7), ~row_shade, row_mask);
                     break;
                 case 2:
-                    host_vram_write_sprrow_4bpp(GFX_COPY_SZ+(im&0xFFE7)+24, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFE7)+24, ~row_shade, row_mask);
                     break;
                 case 3:
-                    host_vram_write_sprrow_4bpp(GFX_COPY_SZ+(im&0xFFE7)+16, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFE7)+16, ~row_shade, row_mask);
                     break;
             }
         }
@@ -129,7 +129,7 @@ void prc_on_oam_update(int sprid)
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR(256+(spr_oamptr[2]&0x7F)*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((spr_oamptr[2]&0x7F)*4);
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
     }
     else
