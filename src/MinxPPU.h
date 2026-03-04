@@ -30,5 +30,6 @@ void isr_vcount();
 void prc_on_map_addr_change();
 void prc_on_spr_addr_change();
 void prc_on_oam_update(int sprid);
+void prc_on_fcopy_mode();
 
 #endif

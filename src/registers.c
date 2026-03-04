@@ -23,6 +23,7 @@ void minx_set_reg(int reg, uint8_t data)
                 case 0b100: case 0b110:
                     //Map rendering disabled
                     irqEnable(IRQ_VCOUNT);
+                    prc_on_fcopy_mode();
                     break;
             }
             return;

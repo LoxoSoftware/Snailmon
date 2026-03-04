@@ -136,4 +136,14 @@ void prc_on_oam_update(int sprid)
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y(180)|ATTR0_DISABLED;
 }
 
+void prc_on_fcopy_mode()
+{
+    //Make map for the host background layer
+    for (int iy=0; iy<12; iy++)
+    {
+        for (int ix=0; ix<8; ix+=2)
+            ((u16*)MAP_BASE_ADR(8))[(ix+iy*32)>>1]= (iy+ix*12)|((iy+(ix+1)*12)<<8);
+    }
+}
+
 #endif

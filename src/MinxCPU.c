@@ -118,11 +118,24 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 		minx_ram[addr_rel]= data;
 
 		if (addr <= 0x0012FF) //Frame buffer write
+		{
+			if ((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
+				return;
+
 			host_vram_write(addr_rel, data);
+		}
 		else if (addr <= 0x00135F) //OAM write
+		{
+			if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_SPR))
+				return;
+
 			prc_on_oam_update((addr_rel-0x300)>>2);
+		}
 		else if (addr <= 0x001360+lut_prc_map_bytes[MinxRegs[VREG_PRC_MODE]>>4]) //Map screen write
 		{
+			if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
+				return;
+
 			uint16_t slot= (addr_rel-0x360);
 			//uint16_t map_rows= lut_maph[MinxRegs[VREG_PRC_MODE]>>4];
 			uint16_t map_cols= lut_mapw[MinxRegs[VREG_PRC_MODE]>>4];
