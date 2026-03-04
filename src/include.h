@@ -1,0 +1,5 @@
+#include "rom_bin.h"
+#include "bios_bin.h"
+#include "MinxCPU.h"
+#include "MinxPPU.h"
+#include "registers.h"

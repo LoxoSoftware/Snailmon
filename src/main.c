@@ -1,0 +1,151 @@
+#include <gba.h>
+#include <string.h>
+#include "include.h"
+
+extern TMinxCPU MinxCPU;
+extern TMinxPRC MinxPRC;
+extern u8 minx_ram[];
+
+const u16* bios_irq_vect= (u16*)bios_bin;
+
+//OBJATTR* oam_buf= (OBJATTR*)(EWRAM+0x2000);
+
+const uint8_t PM_IO_INIT[256] = {
+	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
+	0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, // $08~$0F Second Counter
+	0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $10~$17 Battery Sensor
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, // $18~$1F Timers Controls
+	0x00, 0x30, 0x02, 0x00, 0x02, 0x00, 0x00, 0x40, // $20~$27 IRQ
+	0x00, 0xC0, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, // $28~$2F IRQ
+	0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, // $30~$37 Timer 1
+	0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, // $38~$3F Timer 2
+	0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, // $40~$47 256Hz Counter + ???
+	0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, // $48~$4F Timer 3
+	0xFF, 0x00, 0xFF, 0x00, 0x01, 0x01, 0xff, 0xff, // $50~$57 Keypad + ???
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $58~$5F Unused
+	0x32, 0x64, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, // $60~$67 I/O
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $68~$6F Unused
+	0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $70~$77 Audio + ???
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $78~$7F Unused
+	0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // $80~$87 PRC
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // $88~$8F PRC
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $90~$97 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $98~$9F Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $A0~$A7 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $A8~$AF Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $B0~$B7 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $B8~$BF Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $C0~$C7 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $C8~$CF Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $D0~$D7 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $D8~$DF Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $E0~$E7 Unused
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // $E8~$EF Unused
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // $F0~$F7 ???
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x40, 0xFF  // $F8~$FF LCD I/O
+};
+
+int video_scale= 128; // 256/X
+bool backbuffer= false;
+
+IWRAM_CODE ARM_CODE
+void isr_display()
+{
+    irqDisable(IRQ_VBLANK);
+
+    MinxPRC.host_fb= (u16*)0x06010000;
+
+    //Set keypad register
+    //  MSB Pw|Ri|Le|Do|Up|C|B|A LSB
+    MinxRegs[VREG_KEYPAD]=
+        /* A -> A */ ((REG_KEYINPUT) & 0b00000001) |
+        /* B -> B */ ((REG_KEYINPUT) & 0b00000010) |
+        /* R -> C */ ((REG_KEYINPUT>>6) & 0b00000100) |
+        /* Up-> Up*/ ((REG_KEYINPUT>>3) & 0b00001000) |
+        /* Do-> Do*/ ((REG_KEYINPUT>>3) & 0b00010000) |
+        /* Le-> Le*/ ((REG_KEYINPUT) & 0b00100000) |
+        /* Ri-> Ri*/ ((REG_KEYINPUT<<2) & 0b01000000) |
+        /* St-> Pw*/ ((REG_KEYINPUT<<4) & 0b10000000);
+
+    ((u8*)EWRAM)[0x1000]= MinxCPU.PC.B.L;
+    ((u8*)EWRAM)[0x1001]= MinxCPU.PC.B.H;
+    ((u8*)EWRAM)[0x1002]= MinxCPU.PC.B.I;
+    ((u8*)EWRAM)[0x1003]= MinxCPU.PC.B.X;
+    ((u8*)EWRAM)[0x1004]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L));
+    ((u8*)EWRAM)[0x1005]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+1);
+    ((u8*)EWRAM)[0x1006]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+2);
+    ((u8*)EWRAM)[0x1007]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+3);
+    ((u8*)EWRAM)[0x1008]= MinxCPU.BA.B.L;
+    ((u8*)EWRAM)[0x1009]= MinxCPU.BA.B.H;
+    ((u8*)EWRAM)[0x100A]= MinxCPU.BA.B.I;
+    ((u8*)EWRAM)[0x100B]= MinxCPU.BA.B.X;
+    ((u8*)EWRAM)[0x100C]= MinxCPU.SP.B.L;
+    ((u8*)EWRAM)[0x100D]= MinxCPU.SP.B.H;
+    ((u8*)EWRAM)[0x100E]= MinxCPU.SP.B.I;
+    ((u8*)EWRAM)[0x100F]= MinxCPU.SP.B.X;
+    //*((u32*)0x2001010)= (u32)rom_bin;
+    if (!(REG_KEYINPUT&KEY_L))
+    {
+        //PRC copy complete
+        MinxCPU.PC.W.L= bios_irq_vect[3]&0x00FF;
+        MinxCPU.PC.W.H= bios_irq_vect[3]>>8;
+    }
+    irqEnable(IRQ_VBLANK);
+}
+
+IWRAM_CODE ARM_CODE
+void mainloop()
+{
+    while (1)
+    {
+        //VBlankIntrWait();
+        MinxCPU_Exec();
+    }
+}
+
+int main()
+{
+    SetMode(MODE_1|OBJ_ON|OBJ_1D_MAP);
+    irqInit();
+    irqEnable(IRQ_VBLANK);
+    irqEnable(IRQ_VCOUNT);
+
+    irqSet(IRQ_VBLANK, isr_display);
+    //irqSet(IRQ_VCOUNT, isr_sprduplex_maprender);
+
+    prc_build_palette(128);
+
+    //Disable all sprites
+    for (int i=0; i<127; i++)
+    {
+        OAM[i].attr0= OBJ_Y(240)|ATTR0_DISABLED;
+    }
+
+    //Set sprite affine matrix
+    int sin_rot= -256;
+    int cos_rot= 0;
+    //BG tiles
+    ((OBJAFFINE*)OAM)[0].pa= (128*cos_rot)>>8;
+    ((OBJAFFINE*)OAM)[0].pb= (128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[0].pc= (-128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[0].pd= (128*cos_rot)>>8;
+    //Sprites
+    ((OBJAFFINE*)OAM)[16].pa= 128;
+    ((OBJAFFINE*)OAM)[16].pb= 0;
+    ((OBJAFFINE*)OAM)[16].pc= 0;
+    ((OBJAFFINE*)OAM)[16].pd= 128;
+
+    //Load IO registers default value
+    for (int ir=0; ir<sizeof(PM_IO_INIT); ir++)
+        minx_set_reg(ir, PM_IO_INIT[ir]);
+    //Reset RAM to default value
+    memset(minx_ram, 0xFF, 4096);
+
+    // MinxCPU.PC.W.L= 0x21D0;
+    MinxCPU.PC.W.L= bios_irq_vect[0];
+    MinxCPU.PC.W.H= 0x0000;
+
+    mainloop();
+
+    return 0;
+}
