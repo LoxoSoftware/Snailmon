@@ -2,10 +2,15 @@
 #include <string.h>
 #include "include.h"
 
+#define vSCREEN_XOFS    24
+#define vSCREEN_YOFS    16
+
 extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
 
 const u16* bios_irq_vect= (u16*)bios_bin;
+
+bool option_mask_screen= true;
 
 //OBJATTR* oam_buf= (OBJATTR*)(EWRAM+0x2000);
 
@@ -50,7 +55,7 @@ void isr_display()
     irqDisable(IRQ_VBLANK);
 
     //Update map scroll (don't ask me how I found these values)
-    REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8)-128;
+    REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
     REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
 
     //Set keypad register
@@ -83,6 +88,16 @@ void isr_display()
     ((u8*)EWRAM)[0x100F]= MinxCPU.SP.B.X;
     //*((u32*)0x2001010)= (u32)rom_bin;
 
+    scanKeys();
+    u16 kd= keysDown();
+
+    //Toggle screen mask
+    if (kd&KEY_SELECT)
+    {
+        option_mask_screen= !option_mask_screen;
+        SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
+    }
+
     irqEnable(IRQ_VBLANK);
 }
 
@@ -98,7 +113,7 @@ void mainloop()
 
 int main()
 {
-    SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP);
+    SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
     irqInit();
     irqEnable(IRQ_VBLANK);
     irqEnable(IRQ_VCOUNT);
@@ -130,6 +145,12 @@ int main()
     REG_BG2PD= (-128*cos_rot)>>8;
     // REG_BG2X= 112*256;
     // REG_BG2Y= -12*256;
+
+    //Setup screen mask
+    REG_WIN0H= ((vSCREEN_XOFS)<<8)|((SCREEN_WIDTH-vSCREEN_XOFS));
+    REG_WIN0V= ((vSCREEN_YOFS)<<8)|((SCREEN_HEIGHT-vSCREEN_YOFS));
+    REG_WININ=  0x003F;
+    REG_WINOUT= 0x002B;
 
     //Load IO registers default value
     for (int ir=0; ir<sizeof(PM_IO_INIT); ir++)

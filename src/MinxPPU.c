@@ -25,7 +25,6 @@ extern uint8_t minx_ram[];
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
 const uint16_t lut_maph[4]= { 16, 12, 8, 16 };
 const uint16_t lut_prc_map_bytes[4]= { 12*16, 16*12, 24*8, 24*16 };
-//const uint16_t lut_bg_xofs[4]= { 144, 112, 112, 112 }; //Just to center the screen
 
 void prc_build_palette(int contrast)
 {
@@ -128,7 +127,7 @@ void prc_on_oam_update(int sprid)
 
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
-        OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
+        OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32-1)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
         OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((spr_oamptr[2]&0x7F)*4);
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
     }
