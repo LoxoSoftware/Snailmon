@@ -3,7 +3,6 @@
 #include "include.h"
 
 extern TMinxCPU MinxCPU;
-extern TMinxPRC MinxPRC;
 extern u8 minx_ram[];
 
 const u16* bios_irq_vect= (u16*)bios_bin;
@@ -45,15 +44,10 @@ const uint8_t PM_IO_INIT[256] = {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x40, 0xFF  // $F8~$FF LCD I/O
 };
 
-int video_scale= 128; // 256/X
-bool backbuffer= false;
-
 IWRAM_CODE ARM_CODE
 void isr_display()
 {
     irqDisable(IRQ_VBLANK);
-
-    MinxPRC.host_fb= (u16*)0x06010000;
 
     //Set keypad register
     //  MSB Pw|Ri|Le|Do|Up|C|B|A LSB
@@ -84,12 +78,7 @@ void isr_display()
     ((u8*)EWRAM)[0x100E]= MinxCPU.SP.B.I;
     ((u8*)EWRAM)[0x100F]= MinxCPU.SP.B.X;
     //*((u32*)0x2001010)= (u32)rom_bin;
-    if (!(REG_KEYINPUT&KEY_L))
-    {
-        //PRC copy complete
-        MinxCPU.PC.W.L= bios_irq_vect[3]&0x00FF;
-        MinxCPU.PC.W.H= bios_irq_vect[3]>>8;
-    }
+
     irqEnable(IRQ_VBLANK);
 }
 
@@ -118,7 +107,7 @@ int main()
     //Disable all sprites
     for (int i=0; i<127; i++)
     {
-        OAM[i].attr0= OBJ_Y(240)|ATTR0_DISABLED;
+        OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
 
     //Set sprite affine matrix

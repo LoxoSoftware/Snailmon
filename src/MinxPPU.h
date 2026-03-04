@@ -10,16 +10,6 @@
 // #define vSCREEN_XOFS 24
 // #define vSCREEN_YOFS 16
 
-//#define PRC_GET_TILE_LINE(tile, y) (tile[y])
-
-typedef struct
-{
-    uint16_t* host_fb;
-    uint16_t  host_fb_w;
-    uint8_t line_cnt;
-} TMinxPRC;
-
-extern TMinxPRC MinxPRC;
 extern uint8_t minx_ram[];
 
 void prc_build_palette(int contrast);

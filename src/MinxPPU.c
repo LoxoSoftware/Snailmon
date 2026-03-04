@@ -20,14 +20,6 @@
 
 //#define GFX_8BPP
 
-typedef struct
-{
-    uint16_t* host_fb;
-    uint16_t  host_fb_w;
-    uint8_t line_cnt;
-} TMinxPRC;
-
-TMinxPRC MinxPRC;
 extern uint8_t minx_ram[];
 
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
