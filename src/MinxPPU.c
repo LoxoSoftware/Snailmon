@@ -47,32 +47,12 @@ void prc_build_palette(int contrast)
     }
 }
 
-// void host_vram_write(uint32_t ofs, uint8_t data)
-// {
-//     ((u16*)SPRITE_GFX)[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
-//     ((u16*)SPRITE_GFX)[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
-//     ((u16*)SPRITE_GFX)[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
-//     ((u16*)SPRITE_GFX)[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
-// }
-
 void host_vram_write(uint32_t ofs, uint8_t data)
 {
     GFX_MAP_CHR_ADR[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
     GFX_MAP_CHR_ADR[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
     GFX_MAP_CHR_ADR[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
     GFX_MAP_CHR_ADR[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
-}
-
-inline void host_vram_write_4bpp(uint32_t ofs, uint8_t data)
-{
-    ((u16*)SPRITE_GFX)[ofs*2+1]= (((data)&1)<<12)
-                                |(((data>>1)&1)<<8)
-                                |(((data>>2)&1)<<4)
-                                |((data>>3)&1);
-    ((u16*)SPRITE_GFX)[ofs*2]= (((data>>4)&1)<<12)
-                                |(((data>>5)&1)<<8)
-                                |(((data>>6)&1)<<4)
-                                |((data>>7)&1);
 }
 
 void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
@@ -85,60 +65,17 @@ void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
                                 |((mask&0x20)?0:((shade>>5)&1)+1)<<8
                                 |((mask&0x40)?0:((shade>>6)&1)+1)<<4
                                 |((mask&0x80)?0:((shade>>7)&1)+1);
-    // ((u16*)SPRITE_GFX)[ofs*2+1]= (((shade)&(~(mask)&0x01))<<12)
-    //                             |(((shade>>1)&(~(mask>>1)&0x01))<<8)
-    //                             |(((shade>>2)&(~(mask>>2)&0x01))<<4)
-    //                             |(((shade>>3)&(~(mask>>3)&0x01)));
-    // ((u16*)SPRITE_GFX)[ofs*2]= (((shade>>4)&(~(mask>>4)&0x01))<<12)
-    //                             |(((shade>>5)&(~(mask>>5)&0x01))<<8)
-    //                             |(((shade>>6)&(~(mask>>6)&0x01))<<4)
-    //                             |(((shade>>7)&(~(mask>>7)&0x01)));
 }
 
 IWRAM_CODE ARM_CODE
-void isr_sprduplex_fcopy()
+void isr_vcount()
 {
-    register int sl= REG_VCOUNT-vSCREEN_YOFS;
-    int row= sl>>4;
-
-    for (int ix=0; ix<12; ix++)
-    {
-        OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_256|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_BG_SPRID+ix].attr1= OBJ_X((ix<<4)+vSCREEN_XOFS)|ATTR1_ROTDATA(0)|ATTR1_SIZE_8;
-        OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((ix+12*row)<<1);
-    }
-
-    if (sl >= 112)
-        REG_DISPSTAT= (REG_DISPSTAT&0xFF)|(vSCREEN_YOFS<<8);
-    else
-        REG_DISPSTAT= (REG_DISPSTAT&0xFF)|((REG_VCOUNT+16)<<8);
-}
-
-IWRAM_CODE ARM_CODE
-void isr_sprduplex_maprender()
-{
-    register int sl= REG_VCOUNT-vSCREEN_YOFS;
-    register int yscroll= MinxRegs[VREG_PRC_SCROLL_Y]<<1;
-//     int row= (sl+yscroll)>>4;
-//
-//     for (int ix=0; ix<12; ix++)
-//     {
-// #ifdef GFX_8BPP
-//         OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_256|ATTR0_ROTSCALE_DOUBLE;
-//         OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row])<<1);
-// #else
-//         OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_16|ATTR0_ROTSCALE_DOUBLE;
-//         OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row]));
-// #endif
-//         OAM[GFX_BG_SPRID+ix].attr1= OBJ_X((ix<<4)+vSCREEN_XOFS-(MinxRegs[VREG_PRC_SCROLL_X]&0x0F))|ATTR1_ROTDATA(0)|ATTR1_SIZE_8;
-//     }
-
-    if (sl >= 112-(yscroll&0x0F))
-        REG_DISPSTAT= (REG_DISPSTAT&0xFF)|(((vSCREEN_YOFS-(yscroll&0x0F))<<8));
+    if (REG_VCOUNT >= 128)
+        REG_DISPSTAT= (REG_DISPSTAT&0xFF)|((0)<<8);
     else
         REG_DISPSTAT= (REG_DISPSTAT&0xFF)|((REG_VCOUNT+16)<<8);
 
-    MinxRegs[VREG_PRC_CNT]= sl>>1;
+    MinxRegs[VREG_PRC_CNT]= REG_VCOUNT>>1;
 }
 
 void prc_on_map_addr_change()

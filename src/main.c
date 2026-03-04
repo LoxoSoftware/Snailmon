@@ -104,6 +104,7 @@ int main()
     irqEnable(IRQ_VCOUNT);
 
     irqSet(IRQ_VBLANK, isr_display);
+    irqSet(IRQ_VCOUNT, isr_vcount);
 
     prc_build_palette(128);
 

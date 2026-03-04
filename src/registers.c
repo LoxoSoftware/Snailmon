@@ -18,12 +18,10 @@ void minx_set_reg(int reg, uint8_t data)
                     break;
                 case 0b101: case 0b111:
                     //Map rendering enabled
-                    irqSet(IRQ_VCOUNT, isr_sprduplex_maprender);
                     irqEnable(IRQ_VCOUNT);
                     break;
                 case 0b100: case 0b110:
                     //Map rendering disabled
-                    irqSet(IRQ_VCOUNT, isr_sprduplex_fcopy);
                     irqEnable(IRQ_VCOUNT);
                     break;
             }

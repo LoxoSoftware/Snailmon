@@ -25,8 +25,7 @@ void host_vram_write(uint32_t ofs, uint8_t data);
 void host_vram_write_4bpp(uint32_t ofs, uint8_t data);
 void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask);
 
-void isr_sprduplex_fcopy();
-void isr_sprduplex_maprender();
+void isr_vcount();
 
 void prc_on_map_addr_change();
 void prc_on_spr_addr_change();
