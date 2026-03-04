@@ -49,6 +49,10 @@ void isr_display()
 {
     irqDisable(IRQ_VBLANK);
 
+    //Update map scroll
+    REG_BG2X= (112-(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8;
+    REG_BG2Y= (-12-(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
+
     //Set keypad register
     //  MSB Pw|Ri|Le|Do|Up|C|B|A LSB
     MinxRegs[VREG_KEYPAD]=
@@ -94,13 +98,12 @@ void mainloop()
 
 int main()
 {
-    SetMode(MODE_1|OBJ_ON|OBJ_1D_MAP);
+    SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP);
     irqInit();
     irqEnable(IRQ_VBLANK);
     irqEnable(IRQ_VCOUNT);
 
     irqSet(IRQ_VBLANK, isr_display);
-    //irqSet(IRQ_VCOUNT, isr_sprduplex_maprender);
 
     prc_build_palette(128);
 
@@ -110,19 +113,22 @@ int main()
         OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
 
+    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(8);
+
     //Set sprite affine matrix
     int sin_rot= -256;
     int cos_rot= 0;
-    //BG tiles
     ((OBJAFFINE*)OAM)[0].pa= (128*cos_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pb= (128*sin_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pc= (-128*sin_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pd= (128*cos_rot)>>8;
-    //Sprites
-    ((OBJAFFINE*)OAM)[16].pa= 128;
-    ((OBJAFFINE*)OAM)[16].pb= 0;
-    ((OBJAFFINE*)OAM)[16].pc= 0;
-    ((OBJAFFINE*)OAM)[16].pd= 128;
+    //Set background affine matrix
+    REG_BG2PA= (128*cos_rot)>>8;
+    REG_BG2PB= (128*sin_rot)>>8;
+    REG_BG2PC= (-128*sin_rot)>>8;
+    REG_BG2PD= (128*cos_rot)>>8;
+    // REG_BG2X= 112*256;
+    // REG_BG2Y= -12*256;
 
     //Load IO registers default value
     for (int ir=0; ir<sizeof(PM_IO_INIT); ir++)

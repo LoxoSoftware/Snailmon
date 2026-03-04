@@ -7,10 +7,17 @@
 #define vSCREEN_WIDTH   96
 #define vSCREEN_HEIGHT  64
 
+#define GFX_MAP_SCR_ADR ((u16*)MAP_BASE_ADR(8))
+
 // #define vSCREEN_XOFS 24
 // #define vSCREEN_YOFS 16
 
 extern uint8_t minx_ram[];
+
+extern uint16_t lut_mapw[4];
+extern uint16_t lut_maph[4];
+extern uint16_t lut_prc_map_bytes[4];
+extern uint16_t lut_bg_xofs[4];
 
 void prc_build_palette(int contrast);
 

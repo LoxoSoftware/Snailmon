@@ -18,12 +18,14 @@
 #define PRC_OAM3_INVERT (1<<2)
 #define PRC_OAM3_ENABLE (1<<3)
 
-//#define GFX_8BPP
+#define GFX_MAP_CHR_ADR ((u16*)CHAR_BASE_ADR(0))
 
 extern uint8_t minx_ram[];
 
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
 const uint16_t lut_maph[4]= { 16, 12, 8, 16 };
+const uint16_t lut_prc_map_bytes[4]= { 12*16, 16*12, 24*8, 24*16 };
+//const uint16_t lut_bg_xofs[4]= { 144, 112, 112, 112 }; //Just to center the screen
 
 void prc_build_palette(int contrast)
 {
@@ -45,12 +47,20 @@ void prc_build_palette(int contrast)
     }
 }
 
+// void host_vram_write(uint32_t ofs, uint8_t data)
+// {
+//     ((u16*)SPRITE_GFX)[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
+//     ((u16*)SPRITE_GFX)[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
+//     ((u16*)SPRITE_GFX)[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
+//     ((u16*)SPRITE_GFX)[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
+// }
+
 void host_vram_write(uint32_t ofs, uint8_t data)
 {
-    ((u16*)SPRITE_GFX)[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
-    ((u16*)SPRITE_GFX)[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
-    ((u16*)SPRITE_GFX)[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
-    ((u16*)SPRITE_GFX)[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
+    GFX_MAP_CHR_ADR[ofs*4+3]= (((data>>0)&1)<<8)|((data>>1)&1),
+    GFX_MAP_CHR_ADR[ofs*4+2]= (((data>>2)&1)<<8)|((data>>3)&1),
+    GFX_MAP_CHR_ADR[ofs*4+1]= (((data>>4)&1)<<8)|((data>>5)&1),
+    GFX_MAP_CHR_ADR[ofs*4]= (((data>>6)&1)<<8)|((data>>7)&1);
 }
 
 inline void host_vram_write_4bpp(uint32_t ofs, uint8_t data)
@@ -109,19 +119,19 @@ void isr_sprduplex_maprender()
 {
     register int sl= REG_VCOUNT-vSCREEN_YOFS;
     register int yscroll= MinxRegs[VREG_PRC_SCROLL_Y]<<1;
-    int row= (sl+yscroll)>>4;
-
-    for (int ix=0; ix<12; ix++)
-    {
-#ifdef GFX_8BPP
-        OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_256|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row])<<1);
-#else
-        OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_16|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row]));
-#endif
-        OAM[GFX_BG_SPRID+ix].attr1= OBJ_X((ix<<4)+vSCREEN_XOFS-(MinxRegs[VREG_PRC_SCROLL_X]&0x0F))|ATTR1_ROTDATA(0)|ATTR1_SIZE_8;
-    }
+//     int row= (sl+yscroll)>>4;
+//
+//     for (int ix=0; ix<12; ix++)
+//     {
+// #ifdef GFX_8BPP
+//         OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_256|ATTR0_ROTSCALE_DOUBLE;
+//         OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row])<<1);
+// #else
+//         OAM[GFX_BG_SPRID+ix].attr0= OBJ_Y(REG_VCOUNT)|ATTR0_COLOR_16|ATTR0_ROTSCALE_DOUBLE;
+//         OAM[GFX_BG_SPRID+ix].attr2= OBJ_CHAR((minx_ram[0x360+ix+lut_mapw[(MinxRegs[VREG_PRC_MODE]>>PRC_MODE_MAP_SZ)]*row]));
+// #endif
+//         OAM[GFX_BG_SPRID+ix].attr1= OBJ_X((ix<<4)+vSCREEN_XOFS-(MinxRegs[VREG_PRC_SCROLL_X]&0x0F))|ATTR1_ROTDATA(0)|ATTR1_SIZE_8;
+//     }
 
     if (sl >= 112-(yscroll&0x0F))
         REG_DISPSTAT= (REG_DISPSTAT&0xFF)|(((vSCREEN_YOFS-(yscroll&0x0F))<<8));
@@ -139,11 +149,7 @@ void prc_on_map_addr_change()
 
     for (int i=0; i<GFX_COPY_SZ; i++)
     {
-#ifdef GFX_8BPP
         host_vram_write(i, MinxCPU_OnRead(0, tofs+i));
-#else
-        host_vram_write_4bpp(i, MinxCPU_OnRead(0, tofs+i));
-#endif
     }
 }
 
@@ -159,9 +165,7 @@ void prc_on_spr_addr_change()
         {
             uint8_t row_mask= MinxCPU_OnRead(0, tofs+it*8+ir);
             uint8_t row_shade= MinxCPU_OnRead(0, tofs+(it+2)*8+ir);
-#ifdef GFX_8BPP
 
-#else
             switch ((im>>3)&3) //Fix tile order
             {
                 case 0:
@@ -177,7 +181,6 @@ void prc_on_spr_addr_change()
                     host_vram_write_sprrow_4bpp(GFX_COPY_SZ+(im&0xFFE7)+16, ~row_shade, row_mask);
                     break;
             }
-#endif
         }
     }
 }
@@ -188,13 +191,8 @@ void prc_on_oam_update(int sprid)
 
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
-#ifdef GFX_8BPP
-        OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32)|ATTR0_COLOR_256|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR(512+spr_oamptr[2]*4);
-#else
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
         OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR(256+(spr_oamptr[2]&0x7F)*4);
-#endif
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
     }
     else
