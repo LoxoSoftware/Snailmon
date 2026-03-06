@@ -46,14 +46,16 @@ void prc_build_palette(int contrast)
     }
 }
 
-void host_vram_write(uint32_t ofs, uint8_t data)
+IWRAM_CODE ARM_CODE
+void host_vram_write(register uint32_t ofs, register uint8_t data)
 {
-    GFX_MAP_CHR_ADR[ofs*4+3]= (((data>>7)&1)<<8)|((data>>6)&1),
-    GFX_MAP_CHR_ADR[ofs*4+2]= (((data>>5)&1)<<8)|((data>>4)&1),
-    GFX_MAP_CHR_ADR[ofs*4+1]= (((data>>3)&1)<<8)|((data>>2)&1),
-    GFX_MAP_CHR_ADR[ofs*4]= (((data>>1)&1)<<8)|((data)&1);
+    GFX_MAP_CHR_ADR[(ofs<<2)+3]= (((data>>7)&1)<<8)|((data>>6)&1),
+    GFX_MAP_CHR_ADR[(ofs<<2)+2]= (((data>>5)&1)<<8)|((data>>4)&1),
+    GFX_MAP_CHR_ADR[(ofs<<2)+1]= (((data>>3)&1)<<8)|((data>>2)&1),
+    GFX_MAP_CHR_ADR[(ofs<<2)]= (((data>>1)&1)<<8)|((data)&1);
 }
 
+IWRAM_CODE ARM_CODE
 void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
 {
     ((u16*)SPRITE_GFX)[ofs*2+1]= ((mask&0x01)?0:((shade)&1)+1)<<12
@@ -77,8 +79,11 @@ void isr_vcount()
     MinxRegs[VREG_PRC_CNT]= REG_VCOUNT>>1;
 }
 
+IWRAM_CODE ARM_CODE
 void prc_on_map_addr_change()
 {
+    REG_IME= 0;
+
     int tofs=   ((MinxRegs[VREG_PRC_MAP_LO])|
                 (MinxRegs[VREG_PRC_MAP_MID]<<8)|
                 (MinxRegs[VREG_PRC_MAP_HI]<<16));
@@ -87,10 +92,14 @@ void prc_on_map_addr_change()
     {
         host_vram_write(i, MinxCPU_OnRead(0, tofs+i));
     }
+
+    REG_IME= 1;
 }
 
 void prc_on_spr_addr_change()
 {
+    REG_IME= 0;
+
     int tofs=   ((MinxRegs[VREG_PRC_SPR_LO])|
                 (MinxRegs[VREG_PRC_SPR_MID]<<8)|
                 (MinxRegs[VREG_PRC_SPR_HI]<<16));
@@ -119,6 +128,8 @@ void prc_on_spr_addr_change()
             }
         }
     }
+
+    REG_IME= 1;
 }
 
 void prc_on_oam_update(int sprid)

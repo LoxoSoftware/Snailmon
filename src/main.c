@@ -8,9 +8,13 @@
 extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
 
+uint32_t frames= 0;
+
 const u16* bios_irq_vect= (u16*)bios_bin;
 
 bool option_mask_screen= true;
+
+#define VIRQ_PRC_COPY_DONE      3
 
 //OBJATTR* oam_buf= (OBJATTR*)(EWRAM+0x2000);
 
@@ -48,6 +52,17 @@ const uint8_t PM_IO_INIT[256] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // $F0~$F7 ???
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x40, 0xFF  // $F8~$FF LCD I/O
 };
+
+void send_irq(int irq)
+{
+    switch (irq)
+    {
+        case VIRQ_PRC_COPY_DONE:
+            if (MinxRegs[VREG_IRQ_ENA1]&0x80)
+                MinxCPU_CallIRQ(VIRQ_PRC_COPY_DONE<<1);
+            return;
+    }
+}
 
 IWRAM_CODE ARM_CODE
 void isr_display()
@@ -98,6 +113,11 @@ void isr_display()
         SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
     }
 
+    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
+    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
+        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
+
+    frames++;
     irqEnable(IRQ_VBLANK);
 }
 
@@ -161,6 +181,14 @@ int main()
     // MinxCPU.PC.W.L= 0x21D0;
     MinxCPU.PC.W.L= bios_irq_vect[0];
     MinxCPU.PC.W.H= 0x0000;
+
+    //Sound
+    // REG_SOUNDCNT_X= 0x80;
+    // REG_SOUNDCNT_L= DMGSNDCTRL_LVOL(0)|DMGSNDCTRL_RVOL(7)|DMGSNDCTRL_RSQR2;
+    // REG_SOUNDCNT_H= 2;
+    //
+    // REG_SOUND2CNT_L= 0b1111000000010000;
+    // REG_SOUND2CNT_H= 0b1000100001111111;
 
     mainloop();
 
