@@ -31,11 +31,11 @@ void minx_set_reg(int reg, uint8_t data)
                     break;
             }
             return;
-        case VREG_PRC_MAP_HI: case VREG_PRC_MAP_MID: case VREG_PRC_MAP_LO:
+        case VREG_PRC_MAP_MID:
             MinxRegs[reg]= data;
             prc_on_map_addr_change();
             return;
-        case VREG_PRC_SPR_HI: case VREG_PRC_SPR_MID: case VREG_PRC_SPR_LO:
+        case VREG_PRC_SPR_MID:
             MinxRegs[reg]= data;
             prc_on_spr_addr_change();
             return;
