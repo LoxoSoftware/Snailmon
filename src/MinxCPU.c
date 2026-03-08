@@ -208,7 +208,7 @@ void MinxCPU_OnSleep(int type)
 	irqEnable(IRQ_KEYPAD);
 	REG_KEYCNT= KEY_START | KEYIRQ_AND | KEYIRQ_ENABLE;
 	REG_DISPCNT= (REG_DISPCNT&0xFF7F)|LCDC_OFF;
-	IntrWait(1, IRQ_KEYPAD);
+	Stop();
 
 	//Exit sleep mode
 	//REG_IF= IRQ_KEYPAD;
