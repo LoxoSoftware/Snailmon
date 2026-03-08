@@ -98,11 +98,6 @@ void isr_display()
         option_mask_screen= !option_mask_screen;
         SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
     }
-
-    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
-    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
-        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
-
     if (kd&KEY_A)
         send_irq(VIRQ_INPUT_KEY_A);
     if (kd&KEY_B)
@@ -121,6 +116,10 @@ void isr_display()
         send_irq(VIRQ_INPUT_KEY_POWER);
     if (kd&KEY_L)
         send_irq(VIRQ_INPUT_SHOCK);
+
+    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
+    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
+        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
 
     frames++;
     irqEnable(IRQ_VBLANK);

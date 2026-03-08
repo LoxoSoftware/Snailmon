@@ -193,17 +193,35 @@ void MinxCPU_OnException(int type, uint32_t opc)
 }
 void MinxCPU_OnSleep(int type)
 {
-	consoleDemoInit();
+	//Enter sleep mode
+	irqDisable(IRQ_VBLANK);
+	irqDisable(IRQ_VCOUNT);
 
-	irqEnable(IRQ_VBLANK);
-	irqSet(IRQ_VBLANK, NULL);
-
-	iprintf("SLEEP");
-
-	while(1)
+	uint16_t kh= 0;
+	do
 	{
-		VBlankIntrWait();
+		scanKeys();
+		kh= keysHeld();
 	}
+	while (kh&KEY_START);
+
+	irqEnable(IRQ_KEYPAD);
+	REG_KEYCNT= KEY_START | KEYIRQ_AND | KEYIRQ_ENABLE;
+	REG_DISPCNT= (REG_DISPCNT&0xFF7F)|LCDC_OFF;
+	IntrWait(1, IRQ_KEYPAD);
+
+	//Exit sleep mode
+	//REG_IF= IRQ_KEYPAD;
+	if (MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_COPY)
+		irqEnable(IRQ_VCOUNT);
+	else
+		irqDisable(IRQ_VCOUNT);
+	irqEnable(IRQ_VBLANK);
+	REG_DISPCNT= (REG_DISPCNT&0xFF7F);
+	irqDisable(IRQ_KEYPAD);
+
+	//MinxCPU.Status = MINX_STATUS_NORMAL;
+	SoftReset(0);
 }
 void MinxCPU_OnIRQHandle(uint8_t flag, uint8_t shift_u)
 {
