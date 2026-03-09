@@ -162,7 +162,7 @@ int main()
     prc_build_palette(128);
 
     //Disable all sprites
-    for (int i=0; i<127; i++)
+    for (int i=0; i<128; i++)
     {
         OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
