@@ -18,13 +18,19 @@
 #define PRC_OAM3_INVERT (1<<2)
 #define PRC_OAM3_ENABLE (1<<3)
 
-#define GFX_MAP_CHR_ADR ((u16*)CHAR_BASE_ADR(0))
+#define GFX_MAP_CHR_ADR ((u16*)CHAR_BASE_ADR(prc_bg_tile_base))
 
 extern uint8_t minx_ram[];
 
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
 const uint16_t lut_maph[4]= { 16, 12, 8, 16 };
 const uint16_t lut_prc_map_bytes[4]= { 12*16, 16*12, 24*8, 24*16 };
+
+uint8_t prc_pending_updates= 0x00;
+uint32_t prc_bg_tile_base_cached[2]= { 0xFFFFFFFF, 0xFFFFFFFF };
+uint32_t prc_spr_tile_base_cached[2]= { 0xFFFFFFFF, 0xFFFFFFFF };
+uint8_t prc_bg_tile_base= 0;
+uint8_t prc_spr_tile_base= 0;
 
 void prc_build_palette(int contrast)
 {
@@ -88,14 +94,36 @@ void prc_on_map_addr_change()
                 (MinxRegs[VREG_PRC_MAP_MID]<<8)|
                 (MinxRegs[VREG_PRC_MAP_HI]<<16));
 
+    //Check if the tiles are already cached
+    for (int ib=0; ib<2; ib++)
+    {
+        if (prc_bg_tile_base_cached[ib] == tofs)
+        {
+            prc_bg_tile_base= ib;
+            //NOTE: force update is not supported by this code
+            goto prc_bg_tile_copy_done;
+        }
+    }
+    //If this point is reached tiles were not cached
+    prc_bg_tile_base= (prc_bg_tile_base+1)&1;
+    prc_bg_tile_base_cached[prc_bg_tile_base]= tofs;
+
+//prc_bg_tile_copy_begin:
+
     for (int i=0; i<GFX_COPY_SZ; i++)
     {
         host_vram_write(i, MinxCPU_OnRead(0, tofs+i));
     }
 
+prc_bg_tile_copy_done:
+
+    REG_BG2CNT= (REG_BG2CNT&0b1111111111110011)|CHAR_BASE(prc_bg_tile_base);
+
+    prc_pending_updates &= 0b11111110;
     REG_IME= 1;
 }
 
+void prc_on_oam_update(int sprid);
 void prc_on_spr_addr_change()
 {
     REG_IME= 0;
@@ -104,7 +132,29 @@ void prc_on_spr_addr_change()
                 (MinxRegs[VREG_PRC_SPR_MID]<<8)|
                 (MinxRegs[VREG_PRC_SPR_HI]<<16));
 
-    for (int it=0, im=0; it<GFX_COPY_SZ>>1; it+=4) //For every sprite tile
+    //Check if the tiles are already cached
+    for (int ib=0; ib<2; ib++)
+    {
+        if (prc_spr_tile_base_cached[ib] == tofs)
+        {
+            prc_spr_tile_base= ib;
+            for (int i=0; i<24; i++)
+                prc_on_oam_update(i);
+            if (prc_pending_updates&4)
+            {
+                //Graphics force update request
+                goto prc_spr_tile_copy_begin;
+            }
+            goto prc_spr_tile_copy_done;
+        }
+    }
+    //If this point is reached tiles were not cached
+    prc_spr_tile_base= (prc_spr_tile_base+1)&1;
+    prc_spr_tile_base_cached[prc_spr_tile_base]= tofs;
+
+prc_spr_tile_copy_begin:
+
+    for (int it=0, im=GFX_COPY_SZ*prc_spr_tile_base; it<GFX_COPY_SZ>>1; it+=4) //For every sprite tile
     {
         for (int ir=0; ir<16; ir++, im++) //For every 2 tiles rows
         {
@@ -129,6 +179,9 @@ void prc_on_spr_addr_change()
         }
     }
 
+prc_spr_tile_copy_done:
+
+    prc_pending_updates &= 0b11111001;
     REG_IME= 1;
 }
 
@@ -139,7 +192,7 @@ void prc_on_oam_update(int sprid)
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32-1)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((spr_oamptr[2]&0x7F)*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
     }
     else
@@ -152,7 +205,7 @@ void prc_on_fcopy_mode()
     for (int iy=0; iy<12; iy++)
     {
         for (int ix=0; ix<8; ix+=2)
-            ((u16*)MAP_BASE_ADR(8))[(ix+iy*32)>>1]= (iy+ix*12)|((iy+(ix+1)*12)<<8);
+            ((u16*)MAP_BASE_ADR(31))[(ix+iy*32)>>1]= (iy+ix*12)|((iy+(ix+1)*12)<<8);
     }
 }
 

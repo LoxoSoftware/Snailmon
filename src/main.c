@@ -97,6 +97,7 @@ void isr_display()
     {
         option_mask_screen= !option_mask_screen;
         SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
+        prc_pending_updates |= PRC_QUEUE_COPY_BG_GFX | PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE;
     }
     if (kd&KEY_A)
         send_irq(VIRQ_INPUT_KEY_A);
@@ -120,6 +121,19 @@ void isr_display()
     //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
     if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
         send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
+
+    if (prc_pending_updates&PRC_QUEUE_WAIT)
+    {
+        //IF PRQ_QUEUE_WAIT is set, we shall wait until the flag stops bein set
+        prc_pending_updates &= (~PRC_QUEUE_WAIT); //Unset the flag
+    }
+    else
+    {
+        if (prc_pending_updates&PRC_QUEUE_COPY_BG_GFX)
+            prc_on_map_addr_change();
+        if (prc_pending_updates&PRC_QUEUE_COPY_SPR_GFX)
+            prc_on_spr_addr_change();
+    }
 
     frames++;
     irqEnable(IRQ_VBLANK);
@@ -153,7 +167,7 @@ int main()
         OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
 
-    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(8);
+    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(31);
 
     //Set sprite affine matrix
     int sin_rot= -256;

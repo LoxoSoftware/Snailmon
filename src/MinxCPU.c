@@ -21,6 +21,8 @@
 #include <gba.h>
 #include "include.h"
 
+#define GFX_SZ_TOLERANCE	1024
+
 TMinxCPU MinxCPU;
 //extern TMinxPRC MinxPRC;
 EWRAM_DATA uint8_t minx_ram[4096];
@@ -123,6 +125,7 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 				return;
 
 			host_vram_write(addr_rel, data);
+			return;
 		}
 		else if (addr <= 0x00135F) //OAM write
 		{
@@ -130,6 +133,7 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 				return;
 
 			prc_on_oam_update((addr_rel-0x300)>>2);
+			return;
 		}
 		else if (addr <= 0x001360+lut_prc_map_bytes[MinxRegs[VREG_PRC_MODE]>>4]) //Map screen write
 		{
@@ -146,7 +150,17 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 				*vram_addr= (data<<8)|(*vram_addr&0x00FF);
 			else
 				*vram_addr= (*vram_addr&0xFF00)|data;
+
+			return;
 		}
+
+		uint32_t prc_spr_base= (MinxRegs[VREG_PRC_SPR_HI]<<16)|
+								(MinxRegs[VREG_PRC_SPR_MID]<<8)|
+								MinxRegs[VREG_PRC_SPR_LO];
+
+		if (addr >= prc_spr_base && addr <= prc_spr_base+GFX_SZ_TOLERANCE)
+			//Likely using RAM as a sprite tile base, load the data in VRAM
+			prc_pending_updates |= PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE | PRC_QUEUE_WAIT;
 	}
 	else
 	if (addr >= 0x002000 && addr <= 0x002FFF) //Registers

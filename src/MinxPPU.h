@@ -7,7 +7,12 @@
 #define vSCREEN_WIDTH   96
 #define vSCREEN_HEIGHT  64
 
-#define GFX_MAP_SCR_ADR ((u16*)MAP_BASE_ADR(8))
+#define GFX_MAP_SCR_ADR ((u16*)MAP_BASE_ADR(31))
+
+#define PRC_QUEUE_COPY_BG_GFX   (1<<0)
+#define PRC_QUEUE_COPY_SPR_GFX  (1<<2)
+#define PRC_QUEUE_FORCE_UPDATE  (1<<3)
+#define PRC_QUEUE_WAIT          (1<<4)
 
 // #define vSCREEN_XOFS 24
 // #define vSCREEN_YOFS 16
@@ -18,6 +23,10 @@ extern uint16_t lut_mapw[4];
 extern uint16_t lut_maph[4];
 extern uint16_t lut_prc_map_bytes[4];
 extern uint16_t lut_bg_xofs[4];
+
+extern uint8_t prc_pending_updates;
+extern uint32_t prc_map_tile_base_cached[2];
+extern uint32_t prc_spr_tile_base_cached[2];
 
 void prc_build_palette(int contrast);
 
