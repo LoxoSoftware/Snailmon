@@ -167,7 +167,7 @@ int main()
         OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
 
-    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(31);
+    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(31)|BG_256_COLOR;
 
     //Set sprite affine matrix
     int sin_rot= -256;
