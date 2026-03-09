@@ -6,6 +6,13 @@
 #include <gba.h>
 #include "include.h"
 
+/// Optimization options ///
+
+#define GFX_SPR_FULLSET 0   //Enabling this will disable sprite caching
+                            // but the full tileset will be usable
+
+////////////////////////////
+
 #define vSCREEN_XOFS    24
 #define vSCREEN_YOFS    16
 
@@ -132,14 +139,13 @@ void prc_on_spr_addr_change()
                 (MinxRegs[VREG_PRC_SPR_MID]<<8)|
                 (MinxRegs[VREG_PRC_SPR_HI]<<16));
 
+#if GFX_SPR_FULLSET == 0
     //Check if the tiles are already cached
     for (int ib=0; ib<2; ib++)
     {
         if (prc_spr_tile_base_cached[ib] == tofs)
         {
             prc_spr_tile_base= ib;
-            for (int i=0; i<24; i++)
-                prc_on_oam_update(i);
             if (prc_pending_updates&4)
             {
                 //Graphics force update request
@@ -149,12 +155,20 @@ void prc_on_spr_addr_change()
         }
     }
     //If this point is reached tiles were not cached
+
     prc_spr_tile_base= (prc_spr_tile_base+1)&1;
+#else
+    prc_spr_tile_base= 0;
+#endif
     prc_spr_tile_base_cached[prc_spr_tile_base]= tofs;
 
-prc_spr_tile_copy_begin:
+#if GFX_SPR_FULLSET == 1
+    for (int it=0, im=0; it<GFX_COPY_SZ; it+=4) //For every sprite tile
+#else
+    prc_spr_tile_copy_begin:
 
-    for (int it=0, im=GFX_COPY_SZ*prc_spr_tile_base; it<GFX_COPY_SZ>>1; it+=4) //For every sprite tile
+    for (int it=0, im=(GFX_COPY_SZ>>1)*prc_spr_tile_base*4; it<(GFX_COPY_SZ>>1); it+=4) //For every sprite tile
+#endif
     {
         for (int ir=0; ir<16; ir++, im++) //For every 2 tiles rows
         {
@@ -164,22 +178,27 @@ prc_spr_tile_copy_begin:
             switch ((im>>3)&3) //Fix tile order
             {
                 case 0:
-                    host_vram_write_sprrow_4bpp((im&0xFFE7)+8, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFFFE7)+8, ~row_shade, row_mask);
                     break;
                 case 1:
-                    host_vram_write_sprrow_4bpp((im&0xFFE7), ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFFFE7), ~row_shade, row_mask);
                     break;
                 case 2:
-                    host_vram_write_sprrow_4bpp((im&0xFFE7)+24, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFFFE7)+24, ~row_shade, row_mask);
                     break;
                 case 3:
-                    host_vram_write_sprrow_4bpp((im&0xFFE7)+16, ~row_shade, row_mask);
+                    host_vram_write_sprrow_4bpp((im&0xFFFFE7)+16, ~row_shade, row_mask);
                     break;
             }
         }
     }
 
+#if GFX_SPR_FULLSET == 0
 prc_spr_tile_copy_done:
+
+    for (int i=0; i<24; i++)
+        prc_on_oam_update(i);
+#endif
 
     prc_pending_updates &= 0b11111001;
     REG_IME= 1;
@@ -192,7 +211,11 @@ void prc_on_oam_update(int sprid)
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32-1)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
+#if GFX_SPR_FULLSET == 1
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4);
+#else
         OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
+#endif
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
     }
     else
