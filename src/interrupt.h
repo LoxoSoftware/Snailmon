@@ -2,6 +2,7 @@
 #define INTERRUPT_H
 
 #define VIRQ_PRC_COPY_DONE      3
+#define VIRQ_PRC_FRAMEDIV_OF    4
 #define VIRQ_TMR2_UPPER_UF      5
 #define VIRQ_TMR2_UPPER_UF_8BIT 6
 #define VIRQ_TMR256_2HZ         13
@@ -16,6 +17,44 @@
 #define VIRQ_INPUT_KEY_POWER    21
 #define VIRQ_INPUT_SHOCK        16
 
+uint8_t irq_act1_pending= 0x00;
+uint8_t irq_act2_pending= 0x00;
+uint8_t irq_act3_pending= 0x00;
+uint8_t irq_act4_pending= 0x00;
+
+inline void irq_act(uint8_t act, uint8_t mask)
+{
+    switch (act)
+    {
+        case 1:
+            if (!(irq_act1_pending&mask))
+                return;
+            MinxRegs[VREG_IRQ_ACT1] |= mask;
+            irq_act1_pending &= ~mask;
+            break;
+        case 2:
+            if (!(irq_act2_pending&mask))
+                return;
+            MinxRegs[VREG_IRQ_ACT2] |= mask;
+            irq_act2_pending &= ~mask;
+            break;
+        case 3:
+            if (!(irq_act3_pending&mask))
+                return;
+            MinxRegs[VREG_IRQ_ACT3] |= mask;
+            irq_act3_pending &= ~mask;
+            break;
+        case 4:
+            if (!(irq_act4_pending&mask))
+                return;
+            MinxRegs[VREG_IRQ_ACT4] |= mask;
+            irq_act4_pending &= ~mask;
+            break;
+        default:
+            return;
+    }
+}
+
 void send_irq(int irq)
 {
     switch (irq)
@@ -23,54 +62,86 @@ void send_irq(int irq)
         case VIRQ_PRC_COPY_DONE:
             if (MinxRegs[VREG_IRQ_ENA1]&0x80)
                 MinxCPU_CallIRQ(VIRQ_PRC_COPY_DONE<<1);
+            else
+                irq_act(1, 0x80);
+        return;
+        case VIRQ_PRC_FRAMEDIV_OF:
+            if (MinxRegs[VREG_IRQ_ENA1]&0x40)
+                MinxCPU_CallIRQ(VIRQ_PRC_FRAMEDIV_OF<<1);
+            else
+                irq_act(1, 0x40);
         return;
         case VIRQ_TMR2_UPPER_UF:
             if (MinxRegs[VREG_IRQ_ENA1]&0x20)
                 MinxCPU_CallIRQ(VIRQ_TMR2_UPPER_UF<<1);
+            else
+                irq_act(1, 0x20);
         return;
         case VIRQ_TMR256_2HZ:
             if (MinxRegs[VREG_IRQ_ENA2]&0x08)
                 MinxCPU_CallIRQ(VIRQ_TMR256_2HZ<<1);
+            else
+                irq_act(2, 0x08);
         return;
         case VIRQ_CART_EJECT:
             if (MinxRegs[VREG_IRQ_ENA2]&0x02)
                 MinxCPU_CallIRQ(VIRQ_CART_EJECT<<1);
+            else
+                irq_act(2, 0x02);
         return;
         case VIRQ_INPUT_KEY_A:
             if (MinxRegs[VREG_IRQ_ENA3]&0x01)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_A<<1);
+            else
+                irq_act(3, 0x01);
         return;
         case VIRQ_INPUT_KEY_B:
             if (MinxRegs[VREG_IRQ_ENA3]&0x02)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_B<<1);
+            else
+                irq_act(3, 0x02);
         return;
         case VIRQ_INPUT_KEY_C:
             if (MinxRegs[VREG_IRQ_ENA3]&0x04)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_C<<1);
+            else
+                irq_act(3, 0x04);
         return;
         case VIRQ_INPUT_KEY_UP:
             if (MinxRegs[VREG_IRQ_ENA3]&0x08)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_UP<<1);
+            else
+                irq_act(3, 0x08);
         return;
         case VIRQ_INPUT_KEY_DOWN:
             if (MinxRegs[VREG_IRQ_ENA3]&0x10)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_DOWN<<1);
+            else
+                irq_act(3, 0x10);
         return;
         case VIRQ_INPUT_KEY_LEFT:
             if (MinxRegs[VREG_IRQ_ENA3]&0x20)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_LEFT<<1);
+            else
+                irq_act(3, 0x20);
         return;
         case VIRQ_INPUT_KEY_RIGHT:
             if (MinxRegs[VREG_IRQ_ENA3]&0x40)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_RIGHT<<1);
+            else
+                irq_act(3, 0x40);
         return;
         case VIRQ_INPUT_KEY_POWER:
             if (MinxRegs[VREG_IRQ_ENA3]&0x80)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_POWER<<1);
+            else
+                irq_act(3, 0x80);
         return;
         case VIRQ_INPUT_SHOCK:
             if (MinxRegs[VREG_IRQ_ENA4]&0x40)
                 MinxCPU_CallIRQ(VIRQ_INPUT_SHOCK<<1);
+            else
+                irq_act(4, 0x40);
         return;
         default:
             break;

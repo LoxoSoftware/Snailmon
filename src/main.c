@@ -55,7 +55,6 @@ void isr_display()
 {
     irqDisable(IRQ_VBLANK);
 
-    //Update map scroll (don't ask me how I found these values)
     REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
     REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
 
@@ -116,6 +115,7 @@ void isr_display()
     if (kd&KEY_START)
         send_irq(VIRQ_INPUT_KEY_POWER);
     if (kd&KEY_L)
+        //send_irq(VIRQ_TMR2_UPPER_UF);
         send_irq(VIRQ_INPUT_SHOCK);
 
     //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled

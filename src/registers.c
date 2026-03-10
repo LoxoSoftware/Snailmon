@@ -4,6 +4,11 @@
 //uint8_t MinxRegs[256];
 uint8_t* MinxRegs= (u8*)(EWRAM+0x1100);
 
+extern uint8_t irq_act1_pending;
+extern uint8_t irq_act2_pending;
+extern uint8_t irq_act3_pending;
+extern uint8_t irq_act4_pending;
+
 void minx_set_reg(int reg, uint8_t data)
 {
     switch(reg)
@@ -40,6 +45,22 @@ void minx_set_reg(int reg, uint8_t data)
             MinxRegs[reg]= data;
             //prc_on_spr_addr_change();
             prc_pending_updates |= PRC_QUEUE_COPY_SPR_GFX;
+            return;
+        case VREG_IRQ_ACT1:
+            MinxRegs[reg]= 0x00;
+            irq_act1_pending |= data;
+            return;
+        case VREG_IRQ_ACT2:
+            MinxRegs[reg]= 0x00;
+            irq_act2_pending |= data;
+            return;
+        case VREG_IRQ_ACT3:
+            MinxRegs[reg]= 0x00;
+            irq_act3_pending |= data;
+            return;
+        case VREG_IRQ_ACT4:
+            MinxRegs[reg]= 0x00;
+            irq_act4_pending |= data;
             return;
         default:
             MinxRegs[reg]= data;
