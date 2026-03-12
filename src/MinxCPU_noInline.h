@@ -1,6 +1,6 @@
 /*
   PokeMini - Pokémon-Mini Emulator
-  Copyright (C) 2009-2015  JustBurn
+  Copyright (C) 2009-2012  JustBurn
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <gba_base.h>
 
 //#define _BIG_ENDIAN
 
@@ -67,13 +68,6 @@ typedef union {
 #define MINX_FLAG_INTFLG  	0x40
 #define MINX_FLAG_INTOFF  	0x80
 
-#define MINX_FLAG_SIGN_S4	0
-#define MINX_FLAG_OVER_S4	1
-#define MINX_FLAG_SIGN_S8	4
-#define MINX_FLAG_OVER_S8	5
-#define MINX_FLAG_SIGN_S16	12
-#define MINX_FLAG_OVER_S16	13
-
 #define MINX_FLAG_SAVE_NUL	0xF0
 #define MINX_FLAG_SAVE_O  	0xF4
 #define MINX_FLAG_SAVE_CO 	0xF6
@@ -89,23 +83,23 @@ enum {
 
 // OnSleep() reasons
 enum {
-	MINX_SLEEP_HALT,
-	MINX_SLEEP_STOP
+	MINX_SLEEP_MinxCPU_HALT,
+	MINX_SLEEP_MinxCPU_STOP
 };
 
 // Status reasons
 enum {
 	MINX_STATUS_NORMAL = 0, // Normal operation
-	MINX_STATUS_HALT = 1,   // CPU during HALT
-	MINX_STATUS_STOP = 2,   // CPU during STOP
+	MINX_STATUS_MinxCPU_HALT = 1,   // CPU during MinxCPU_HALT
+	MINX_STATUS_MinxCPU_STOP = 2,   // CPU during MinxCPU_STOP
 	MINX_STATUS_IRQ = 3,    // Delay caused by hardware IRQ
 };
 
 // DebugHalt reasons
 enum {
-	MINX_DEBUGHALT_RECEIVE,
-	MINX_DEBUGHALT_SUSPEND,
-	MINX_DEBUGHALT_RESUME,
+	DEBUG_HALT_RECEIVE,
+	DEBUG_HALT_SUSPEND,
+	DEBUG_HALT_RESUME,
 };
 
 #ifndef inline
@@ -113,7 +107,8 @@ enum {
 #endif
 
 // Signed 8-Bits to 16-Bits converter
-static inline uint16_t S8_TO_16(int8_t a)
+IWRAM_CODE ARM_CODE
+uint16_t S8_TO_16(int8_t a)
 {
 	return (a & 0x80) ? (0xFF00 | a) : a;
 }
@@ -159,18 +154,21 @@ int MinxCPU_Exec(void);			// Execute 1 CPU instruction
 int MinxCPU_CallIRQ(uint8_t IRQ);	// Call an IRQ
 
 // Helpers
-static inline uint16_t ReadMem16(uint32_t addr)
+IWRAM_CODE ARM_CODE
+uint16_t ReadMem16(uint32_t addr)
 {
 	return MinxCPU_OnRead(1, addr) + (MinxCPU_OnRead(1, addr+1) << 8);
 }
 
-static inline void WriteMem16(uint32_t addr, uint16_t data)
+IWRAM_CODE ARM_CODE
+void WriteMem16(uint32_t addr, uint16_t data)
 {
 	MinxCPU_OnWrite(1, addr, (uint8_t)data);
 	MinxCPU_OnWrite(1, addr+1, data >> 8);
 }
 
-static inline uint8_t Fetch8(void)
+IWRAM_CODE ARM_CODE
+uint8_t Fetch8(void)
 {
 	if (MinxCPU.PC.W.L & 0x8000) {
 		// Banked area
@@ -182,13 +180,15 @@ static inline uint8_t Fetch8(void)
 	return MinxCPU.IR;
 }
 
-static inline uint16_t Fetch16(void)
+IWRAM_CODE ARM_CODE
+uint16_t Fetch16(void)
 {
 	uint8_t LB = Fetch8();
 	return (Fetch8() << 8) | LB;
 }
 
-static inline void Set_U(uint8_t val)
+IWRAM_CODE ARM_CODE
+ void Set_U(uint8_t val)
 {
 	if (val != MinxCPU.U2) MinxCPU.Shift_U = 2;
 	MinxCPU.U1 = val;
@@ -205,18 +205,18 @@ int MinxCPU_ExecSPCF(void);
 
 // Instructions Macros
 
-static inline uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
 {
 	register uint8_t RES;
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
 	switch (MinxCPU.F & 0x30) {
 	case 0x00: // Normal
 		RES = A + B;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES < A) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B ^ 0x80) & 0x80) >> MINX_FLAG_OVER_S8) | // Overflow
-			((RES & 0x80) >> MINX_FLAG_SIGN_S8); // Sign
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x80) != 0) && (((A ^ B) & 0x80) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0xFF;
 	case 0x10: // BCD
 		if ((uint8_t)((A & 15) + (B & 15)) >= 10) {
@@ -225,17 +225,15 @@ static inline uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
 			RES = A + B;
 		}
 		if (RES >= 0xA0) RES += 0x60;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES < A) ? MINX_FLAG_CARRY : 0); // Carry
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0xFF;
 	case 0x20: // Nibble
 		RES = (A & 15) + (B & 15);
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B ^ 0x08) & 0x08) >> MINX_FLAG_OVER_S4) | // Overflow
-			((RES & 0x08) >> MINX_FLAG_SIGN_S4); // Sign
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x8) != 0) && (((A ^ B) & 0x8) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 8) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0x0F;
 	default:   // BCD and Nibble
 		if ((uint8_t)((A & 15) + (B & 15)) >= 10) {
@@ -243,27 +241,27 @@ static inline uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
 		} else {
 			RES = (A & 15) + (B & 15);
 		}
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0); // Carry
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0x0F;
 	}
 }
 
-static inline uint16_t MinxCPU_ADD16(uint16_t A, uint16_t B)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_ADD16(uint16_t A, uint16_t B)
 {
 	register uint16_t RES;
 	RES = A + B;
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
-	MinxCPU.F |=
-		((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-		((RES < A) ? MINX_FLAG_CARRY : 0) | // Carry
-		(((A ^ RES) & (A ^ B ^ 0x8000) & 0x8000) >> MINX_FLAG_OVER_S16) | // Overflow
-		((RES & 0x8000) >> MINX_FLAG_SIGN_S16); // Sign
+	if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
+	if ((((A ^ RES) & 0x8000) != 0) && (((A ^ B) & 0x8000) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+	if (RES & 0x8000) MinxCPU.F |= MINX_FLAG_SIGN;
 	return (uint16_t)RES;
 }
 
-static inline uint8_t MinxCPU_ADC8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_ADC8(uint8_t A, uint8_t B)
 {
 	register uint8_t RES;
 	register uint8_t CARRY = (MinxCPU.F & MINX_FLAG_CARRY) ? 1 : 0;
@@ -271,11 +269,10 @@ static inline uint8_t MinxCPU_ADC8(uint8_t A, uint8_t B)
 	switch (MinxCPU.F & 0x30) {
 	case 0x00: // Normal
 		RES = A + B + CARRY;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES < A) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B ^ 0x80) & 0x80) >> MINX_FLAG_OVER_S8) | // Overflow
-			((RES & 0x80) >> MINX_FLAG_SIGN_S8); // Sign
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x80) != 0) && (((A ^ B) & 0x80) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0xFF;
 	case 0x10: // BCD
 		if ((uint8_t)((A & 15) + (B & 15) + CARRY) >= 10) {
@@ -284,17 +281,15 @@ static inline uint8_t MinxCPU_ADC8(uint8_t A, uint8_t B)
 			RES = A + B + CARRY;
 		}
 		if (RES >= 0xA0) RES += 0x60;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES < A) ? MINX_FLAG_CARRY : 0); // Carry
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0xFF;
 	case 0x20: // Nibble
 		RES = (A & 15) + (B & 15) + CARRY;
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B ^ 0x08) & 0x08) >> MINX_FLAG_OVER_S4) | // Overflow
-			((RES & 0x08) >> MINX_FLAG_SIGN_S4); // Sign
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x8) != 0) && (((A ^ B) & 0x8) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 8) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0x0F;
 	default:   // BCD and Nibble
 		if ((uint8_t)((A & 15) + (B & 15) + CARRY) >= 10) {
@@ -302,38 +297,37 @@ static inline uint8_t MinxCPU_ADC8(uint8_t A, uint8_t B)
 		} else {
 			RES = (A & 15) + (B & 15) + CARRY;
 		}
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0); // Carry
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0x0F;
 	}
 }
 
-static inline uint16_t MinxCPU_ADC16(uint16_t A, uint16_t B)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_ADC16(uint16_t A, uint16_t B)
 {
 	register uint16_t RES;
 	RES = A + B + ((MinxCPU.F & MINX_FLAG_CARRY) ? 1 : 0);
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
-	MinxCPU.F |=
-		((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-		((RES < A) ? MINX_FLAG_CARRY : 0) | // Carry
-		(((A ^ RES) & (A ^ B ^ 0x8000) & 0x8000) >> MINX_FLAG_OVER_S16) | // Overflow
-		((RES & 0x8000) >> MINX_FLAG_SIGN_S16); // Sign
+	if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (RES < A) MinxCPU.F |= MINX_FLAG_CARRY;
+	if ((((A ^ RES) & 0x8000) != 0) && (((A ^ B) & 0x8000) == 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+	if (RES & 0x8000) MinxCPU.F |= MINX_FLAG_SIGN;
 	return (uint16_t)RES;
 }
 
-static inline uint8_t MinxCPU_SUB8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SUB8(uint8_t A, uint8_t B)
 {
 	register uint8_t RES;
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
 	switch (MinxCPU.F & 0x30) {
 	case 0x00: // Normal
 		RES = A - B;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((A < B) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B) & 0x80) >> MINX_FLAG_OVER_S8) | // Overflow
-			((RES & 0x80) >> MINX_FLAG_SIGN_S8); // Sign
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x80) != 0) && (((A ^ B) & 0x80) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0xFF;
 	case 0x10: // BCD
 		if ((uint8_t)((A & 15) - (B & 15)) >= 10) {
@@ -342,17 +336,15 @@ static inline uint8_t MinxCPU_SUB8(uint8_t A, uint8_t B)
 			RES = A - B;
 		}
 		if (RES >= 0xA0) RES -= 0x60;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((A < B) ? MINX_FLAG_CARRY : 0); // Carry
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0xFF;
 	case 0x20: // Nibble
 		RES = (A & 15) - (B & 15);
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B) & 0x08) >> MINX_FLAG_OVER_S4) | // Overflow
-			((RES & 0x08) >> MINX_FLAG_SIGN_S4); // Sign
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x8) != 0) && (((A ^ B) & 0x8) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 8) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0x0F;
 	default:   // BCD and Nibble
 		if ((uint8_t)((A & 15) - (B & 15)) >= 10) {
@@ -360,27 +352,27 @@ static inline uint8_t MinxCPU_SUB8(uint8_t A, uint8_t B)
 		} else {
 			RES = (A & 15) - (B & 15);
 		}
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0); // Carry
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0x0F;
 	}
 }
 
-static inline uint16_t MinxCPU_SUB16(uint16_t A, uint16_t B)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_SUB16(uint16_t A, uint16_t B)
 {
 	register uint16_t RES;
 	RES = A - B;
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
-	MinxCPU.F |=
-		((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-		((A < B) ? MINX_FLAG_CARRY : 0) | // Carry
-		(((A ^ RES) & (A ^ B) & 0x8000) >> MINX_FLAG_OVER_S16) | // Overflow
-		((RES & 0x8000) >> MINX_FLAG_SIGN_S16); // Sign
+	if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
+	if ((((A ^ RES) & 0x8000) != 0) && (((A ^ B) & 0x8000) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+	if (RES & 0x8000) MinxCPU.F |= MINX_FLAG_SIGN;
 	return (uint16_t)RES;
 }
 
-static inline uint8_t MinxCPU_SBC8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SBC8(uint8_t A, uint8_t B)
 {
 	register uint8_t RES;
 	register uint8_t CARRY = (MinxCPU.F & MINX_FLAG_CARRY) ? 1 : 0;
@@ -388,11 +380,10 @@ static inline uint8_t MinxCPU_SBC8(uint8_t A, uint8_t B)
 	switch (MinxCPU.F & 0x30) {
 	case 0x00: // Normal
 		RES = A - B - CARRY;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((A < B) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B) & 0x80) >> MINX_FLAG_OVER_S8) | // Overflow
-			((RES & 0x80) >> MINX_FLAG_SIGN_S8); // Sign
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x80) != 0) && (((A ^ B) & 0x80) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0xFF;
 	case 0x10: // BCD
 		if ((uint8_t)((A & 15) - (B & 15) - CARRY) >= 10) {
@@ -401,17 +392,15 @@ static inline uint8_t MinxCPU_SBC8(uint8_t A, uint8_t B)
 			RES = A - B - CARRY;
 		}
 		if (RES >= 0xA0) RES -= 0x60;
-		MinxCPU.F |=
-			((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((A < B) ? MINX_FLAG_CARRY : 0); // Carry
+		if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0xFF;
 	case 0x20: // Nibble
 		RES = (A & 15) - (B & 15) - CARRY;
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0) | // Carry
-			(((A ^ RES) & (A ^ B) & 0x08) >> MINX_FLAG_OVER_S4) | // Overflow
-			((RES & 0x08) >> MINX_FLAG_SIGN_S4); // Sign
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
+		if ((((A ^ RES) & 0x8) != 0) && (((A ^ B) & 0x8) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+		if (RES & 8) MinxCPU.F |= MINX_FLAG_SIGN;
 		return RES & 0x0F;
 	default:   // BCD and Nibble
 		if ((uint8_t)((A & 15) - (B & 15) - CARRY) >= 10) {
@@ -419,57 +408,57 @@ static inline uint8_t MinxCPU_SBC8(uint8_t A, uint8_t B)
 		} else {
 			RES = (A & 15) - (B & 15) - CARRY;
 		}
-		MinxCPU.F |=
-			(((RES & 15) == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-			((RES >= 16) ? MINX_FLAG_CARRY : 0); // Carry
+		if ((RES & 15) == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (RES >= 16) MinxCPU.F |= MINX_FLAG_CARRY;
 		return RES & 0x0F;
 	}
 }
 
-static inline uint16_t MinxCPU_SBC16(uint16_t A, uint16_t B)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_SBC16(uint16_t A, uint16_t B)
 {
 	register uint16_t RES;
 	RES = A - B - ((MinxCPU.F & MINX_FLAG_CARRY) ? 1 : 0);
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
-	MinxCPU.F |=
-		((RES == 0) ? MINX_FLAG_ZERO : 0) | // Zero
-		((A < B) ? MINX_FLAG_CARRY : 0) | // Carry
-		(((A ^ RES) & (A ^ B) & 0x8000) >> MINX_FLAG_OVER_S16) | // Overflow
-		((RES & 0x8000) >> MINX_FLAG_SIGN_S16); // Sign
+	if (RES == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A < B) MinxCPU.F |= MINX_FLAG_CARRY;
+	if ((((A ^ RES) & 0x8000) != 0) && (((A ^ B) & 0x8000) != 0)) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+	if (RES & 0x8000) MinxCPU.F |= MINX_FLAG_SIGN;
 	return (uint16_t)RES;
 }
 
-static inline uint8_t MinxCPU_AND8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_AND8(uint8_t A, uint8_t B)
 {
 	A &= B;
 	MinxCPU.F &= MINX_FLAG_SAVE_CO;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_OR8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_OR8(uint8_t A, uint8_t B)
 {
 	A |= B;
 	MinxCPU.F &= MINX_FLAG_SAVE_CO;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_XOR8(uint8_t A, uint8_t B)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_XOR8(uint8_t A, uint8_t B)
 {
 	A ^= B;
 	MinxCPU.F &= MINX_FLAG_SAVE_CO;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 128) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_INC8(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_INC8(uint8_t A)
 {
 	A++;
 	MinxCPU.F &= MINX_FLAG_SAVE_COS;
@@ -477,7 +466,8 @@ static inline uint8_t MinxCPU_INC8(uint8_t A)
 	return A;
 }
 
-static inline uint16_t MinxCPU_INC16(uint16_t A)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_INC16(uint16_t A)
 {
 	A++;
 	MinxCPU.F &= MINX_FLAG_SAVE_COS;
@@ -485,7 +475,8 @@ static inline uint16_t MinxCPU_INC16(uint16_t A)
 	return A;
 }
 
-static inline uint8_t MinxCPU_DEC8(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_DEC8(uint8_t A)
 {
 	A--;
 	MinxCPU.F &= MINX_FLAG_SAVE_COS;
@@ -493,7 +484,8 @@ static inline uint8_t MinxCPU_DEC8(uint8_t A)
 	return A;
 }
 
-static inline uint16_t MinxCPU_DEC16(uint16_t A)
+IWRAM_CODE ARM_CODE
+ uint16_t MinxCPU_DEC16(uint16_t A)
 {
 	A--;
 	MinxCPU.F &= MINX_FLAG_SAVE_COS;
@@ -501,13 +493,15 @@ static inline uint16_t MinxCPU_DEC16(uint16_t A)
 	return A;
 }
 
-static inline void MinxCPU_PUSH(uint8_t A)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_PUSH(uint8_t A)
 {
 	MinxCPU.SP.W.L--;
 	MinxCPU_OnWrite(1, MinxCPU.SP.D, A);
 }
 
-static inline uint8_t MinxCPU_POP(void)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_POP(void)
 {
 	register uint8_t data;
 	data = MinxCPU_OnRead(1, MinxCPU.SP.D);
@@ -515,7 +509,8 @@ static inline uint8_t MinxCPU_POP(void)
 	return data;
 }
 
-static inline void MinxCPU_CALLS(uint16_t OFFSET)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_CALLS(uint16_t OFFSET)
 {
 	MinxCPU_PUSH(MinxCPU.PC.B.I);
 	MinxCPU_PUSH(MinxCPU.PC.B.H);
@@ -525,14 +520,16 @@ static inline void MinxCPU_CALLS(uint16_t OFFSET)
 	MinxCPU.PC.W.L = MinxCPU.PC.W.L + OFFSET - 1;
 }
 
-static inline void MinxCPU_JMPS(uint16_t OFFSET)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_JMPS(uint16_t OFFSET)
 {
 	MinxCPU.PC.B.I = MinxCPU.U1;
 	MinxCPU.U2 = MinxCPU.U1;
 	MinxCPU.PC.W.L = MinxCPU.PC.W.L + OFFSET - 1;
 }
 
-static inline void MinxCPU_CALLU(uint16_t ADDR)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_CALLU(uint16_t ADDR)
 {
 	MinxCPU_PUSH(MinxCPU.PC.B.I);
 	MinxCPU_PUSH(MinxCPU.PC.B.H);
@@ -542,14 +539,16 @@ static inline void MinxCPU_CALLU(uint16_t ADDR)
 	MinxCPU.PC.W.L = ADDR;
 }
 
-static inline void MinxCPU_JMPU(uint16_t ADDR)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_JMPU(uint16_t ADDR)
 {
 	MinxCPU.PC.B.I = MinxCPU.U1;
 	MinxCPU.U2 = MinxCPU.U1;
 	MinxCPU.PC.W.L = ADDR;
 }
 
-static inline void MinxCPU_JDBNZ(uint16_t OFFSET)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_JDBNZ(uint16_t OFFSET)
 {
 	MinxCPU.BA.B.H = MinxCPU_DEC8(MinxCPU.BA.B.H);
 	if (MinxCPU.BA.B.H != 0) {
@@ -557,12 +556,14 @@ static inline void MinxCPU_JDBNZ(uint16_t OFFSET)
 	}
 }
 
-static inline uint8_t MinxCPU_SWAP(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SWAP(uint8_t A)
 {
 	return (A << 4) | (A >> 4);
 }
 
-static inline void MinxCPU_RET(void)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_RET(void)
 {
 	MinxCPU.PC.B.L = MinxCPU_POP();
 	MinxCPU.PC.B.H = MinxCPU_POP();
@@ -570,7 +571,8 @@ static inline void MinxCPU_RET(void)
 	Set_U(MinxCPU.PC.B.I);
 }
 
-static inline void MinxCPU_RETI(void)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_RETI(void)
 {
 	MinxCPU.F = MinxCPU_POP();
 	MinxCPU.PC.B.L = MinxCPU_POP();
@@ -580,7 +582,8 @@ static inline void MinxCPU_RETI(void)
 	MinxCPU_OnIRQHandle(MinxCPU.F, MinxCPU.Shift_U);
 }
 
-static inline void MinxCPU_CALLX(uint16_t ADDR)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_CALLX(uint16_t ADDR)
 {
 	MinxCPU_PUSH(MinxCPU.PC.B.I);
 	MinxCPU_PUSH(MinxCPU.PC.B.H);
@@ -590,7 +593,8 @@ static inline void MinxCPU_CALLX(uint16_t ADDR)
 	MinxCPU.PC.W.L = ReadMem16((MinxCPU.HL.B.I << 16) + ADDR);
 }
 
-static inline void MinxCPU_CALLI(uint16_t ADDR)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_CALLI(uint16_t ADDR)
 {
 	MinxCPU_PUSH(MinxCPU.PC.B.I);
 	MinxCPU_PUSH(MinxCPU.PC.B.H);
@@ -603,7 +607,8 @@ static inline void MinxCPU_CALLI(uint16_t ADDR)
 	MinxCPU_OnIRQHandle(MinxCPU.F, MinxCPU.Shift_U);
 }
 
-static inline void MinxCPU_JMPI(uint16_t ADDR)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_JMPI(uint16_t ADDR)
 {
 	MinxCPU_PUSH(MinxCPU.F);
 	MinxCPU.F |= 0xC0;
@@ -613,140 +618,141 @@ static inline void MinxCPU_JMPI(uint16_t ADDR)
 	MinxCPU_OnIRQHandle(MinxCPU.F, MinxCPU.Shift_U);
 }
 
-static inline uint8_t MinxCPU_SAL(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SAL(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
 	if (A & 0x80) MinxCPU.F |= MINX_FLAG_CARRY;
 	if ((!(A & 0x40)) != (!(A & 0x80))) MinxCPU.F |= MINX_FLAG_OVERFLOW;
 	A = A << 1;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_SHL(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SHL(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x80) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = A << 1;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_SAR(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SAR(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
 	if (A & 0x01) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = (A & 0x80) | (A >> 1);
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_SHR(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_SHR(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x01) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = A >> 1;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_ROLC(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_ROLC(uint8_t A)
 {
 	register uint8_t CARRY = (MinxCPU.F & MINX_FLAG_CARRY) ? 1 : 0;
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x80) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = (A << 1) | CARRY;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_ROL(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_ROL(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x80) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = (A << 1) | (A >> 7);
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_RORC(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_RORC(uint8_t A)
 {
 	register uint8_t CARRY = (MinxCPU.F & MINX_FLAG_CARRY) ? 0x80 : 0x00;
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x01) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = (A >> 1) | CARRY;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_ROR(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_ROR(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_O;
 	if (A & 0x01) MinxCPU.F |= MINX_FLAG_CARRY;
 	A = (A >> 1) | (A << 7);
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline uint8_t MinxCPU_NOT(uint8_t A)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_NOT(uint8_t A)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_CO;
 	A = A ^ 0xFF;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
-	return A;	
-}
-
-static inline uint8_t MinxCPU_NEG(uint8_t A)
-{
-	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
-	A = -A;
-	MinxCPU.F |= 
-		((A == 0) ? MINX_FLAG_ZERO : MINX_FLAG_CARRY) |
-		((A == 0x80) ? MINX_FLAG_OVERFLOW : 0) |
-		((A & 0x80) >> MINX_FLAG_SIGN_S8);
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	return A;
 }
 
-static inline void MinxCPU_HALT(void)
+IWRAM_CODE ARM_CODE
+ uint8_t MinxCPU_NEG(uint8_t A)
 {
-	MinxCPU.Status = MINX_STATUS_HALT;
-	MinxCPU_OnSleep(MINX_SLEEP_HALT);
+	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
+	A = -A;
+	if (A == 0) MinxCPU.F |= MINX_FLAG_ZERO; else MinxCPU.F |= MINX_FLAG_CARRY;
+	if (A == 0x80) MinxCPU.F |= MINX_FLAG_OVERFLOW;
+	if (A & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
+	return A;
 }
 
-static inline void MinxCPU_STOP(void)
+ void MinxCPU_HALT(void)
 {
-	MinxCPU.Status = MINX_STATUS_STOP;
-	MinxCPU_OnSleep(MINX_SLEEP_STOP);
+	MinxCPU.Status = MINX_STATUS_MinxCPU_HALT;
+	MinxCPU_OnSleep(MINX_SLEEP_MinxCPU_HALT);
 }
 
-static inline void MinxCPU_MUL(void)
+ void MinxCPU_STOP(void)
+{
+	MinxCPU.Status = MINX_STATUS_MinxCPU_STOP;
+	MinxCPU_OnSleep(MINX_SLEEP_MinxCPU_STOP);
+}
+
+IWRAM_CODE ARM_CODE
+ void MinxCPU_MUL(void)
 {
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
 	MinxCPU.HL.W.L = (uint16_t)MinxCPU.HL.B.L * (uint16_t)MinxCPU.BA.B.L;
-	MinxCPU.F |= 
-		((MinxCPU.HL.W.L == 0) ? MINX_FLAG_ZERO : 0) |
-		((MinxCPU.HL.W.L & 0x8000) ? MINX_FLAG_SIGN : 0);
+	if (MinxCPU.HL.W.L == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+	if (MinxCPU.HL.W.L & 0x8000) MinxCPU.F |= MINX_FLAG_SIGN;
 }
 
-static inline void MinxCPU_DIV(void)
+IWRAM_CODE ARM_CODE
+ void MinxCPU_DIV(void)
 {
 	uint16_t RES;
 	MinxCPU.F &= MINX_FLAG_SAVE_NUL;
@@ -758,10 +764,9 @@ static inline void MinxCPU_DIV(void)
 	if (RES < 256) {
 		MinxCPU.HL.B.H = MinxCPU.HL.W.L % MinxCPU.BA.B.L;
 		MinxCPU.HL.B.L = (uint8_t)RES;
-		MinxCPU.F |= 
-			((MinxCPU.HL.B.L == 0) ? MINX_FLAG_ZERO : 0) |
-			((MinxCPU.HL.B.L & 0x80) ? MINX_FLAG_SIGN : 0);
-	} else MinxCPU.F |= MINX_FLAG_OVERFLOW | MINX_FLAG_SIGN;
+		if (MinxCPU.HL.B.L == 0) MinxCPU.F |= MINX_FLAG_ZERO;
+		if (MinxCPU.HL.B.L & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
+	} else MinxCPU.F |= (MINX_FLAG_OVERFLOW | MINX_FLAG_SIGN);
 }
 
 #endif
