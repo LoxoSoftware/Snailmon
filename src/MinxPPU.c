@@ -32,6 +32,9 @@ extern uint8_t minx_ram[];
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
 const uint16_t lut_maph[4]= { 16, 12, 8, 16 };
 const uint16_t lut_prc_map_bytes[4]= { 12*16, 16*12, 24*8, 24*16 };
+//Sprite position correction due to PPU inaccuracy
+const int16_t  lut_spr_xcorr[4]= { 0, -1, 0, -1 }; //No flip | H flip | V flip | both flip
+const int16_t  lut_spr_ycorr[4]= { -1, -1, 0, 0 }; //No flip | H flip | V flip | both flip
 
 uint8_t prc_pending_updates= 0x00;
 uint32_t prc_bg_tile_base_cached[2]= { 0xFFFFFFFF, 0xFFFFFFFF };
@@ -207,16 +210,17 @@ prc_spr_tile_copy_done:
 void prc_on_oam_update(int sprid)
 {
     uint8_t* spr_oamptr= &minx_ram[0x300+sprid*4];
+    uint8_t flip_mode= spr_oamptr[3]&0x03;
 
     if (spr_oamptr[3]&PRC_OAM3_ENABLE)
     {
-        OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32-1)|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
+        OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32+lut_spr_ycorr[flip_mode])|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
 #if GFX_SPR_FULLSET == 1
         OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4);
 #else
         OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
 #endif
-        OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32)|ATTR1_SIZE_16;
+        OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_ROT_SCALE(flip_mode)|OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32+lut_spr_xcorr[flip_mode])|ATTR1_SIZE_16;
     }
     else
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y(180)|ATTR0_DISABLED;

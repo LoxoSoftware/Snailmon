@@ -172,10 +172,26 @@ int main()
     //Set sprite affine matrix
     int sin_rot= -256;
     int cos_rot= 0;
+    //No flip
     ((OBJAFFINE*)OAM)[0].pa= (128*cos_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pb= (128*sin_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pc= (-128*sin_rot)>>8;
     ((OBJAFFINE*)OAM)[0].pd= (128*cos_rot)>>8;
+    //H flip
+    ((OBJAFFINE*)OAM)[1].pa= (128*cos_rot)>>8;
+    ((OBJAFFINE*)OAM)[1].pb= (128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[1].pc= (128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[1].pd= (-128*cos_rot)>>8;
+    //V flip
+    ((OBJAFFINE*)OAM)[2].pa= (-128*cos_rot)>>8;
+    ((OBJAFFINE*)OAM)[2].pb= (-128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[2].pc= (-128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[2].pd= (128*cos_rot)>>8;
+    //V & H flip
+    ((OBJAFFINE*)OAM)[3].pa= (-128*cos_rot)>>8;
+    ((OBJAFFINE*)OAM)[3].pb= (-128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[3].pc= (128*sin_rot)>>8;
+    ((OBJAFFINE*)OAM)[3].pd= (-128*cos_rot)>>8;
     //Set background affine matrix
     REG_BG2PA= (128*cos_rot)>>8;
     REG_BG2PB= (-128*sin_rot)>>8;
