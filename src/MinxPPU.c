@@ -46,20 +46,21 @@ void prc_build_palette(int contrast)
 {
     if (contrast >= 0)
     {
-        BG_PALETTE[1]= RGB5(4,6,4);
-        BG_PALETTE[0]= RGB5(24,28,24);
-        SPRITE_PALETTE[2]= RGB5(24,28,24);
-        SPRITE_PALETTE[1]= RGB5(4,6,4);
-        SPRITE_PALETTE[0]= RGB5(31,0,31);
+        BG_PALETTE[0x01]= RGB5(4,6,4);
+        BG_PALETTE[0x00]= RGB5(24,28,24);
     }
     else
     {
-        BG_PALETTE[0]= RGB5(4,6,4);
-        BG_PALETTE[1]= RGB5(24,28,24);
-        SPRITE_PALETTE[1]= RGB5(24,28,24);
-        SPRITE_PALETTE[2]= RGB5(4,6,4);
-        SPRITE_PALETTE[0]= RGB5(31,0,31);
+        BG_PALETTE[0x00]= RGB5(4,6,4);
+        BG_PALETTE[0x01]= RGB5(24,28,24);
     }
+
+    SPRITE_PALETTE[0x00]= RGB5(31,0,31);
+    SPRITE_PALETTE[0x01]= BG_PALETTE[0x01];
+    SPRITE_PALETTE[0x02]= BG_PALETTE[0x00];
+    SPRITE_PALETTE[0x10]= RGB5(0,31,0);
+    SPRITE_PALETTE[0x11]= BG_PALETTE[0x00];
+    SPRITE_PALETTE[0x12]= BG_PALETTE[0x01];
 }
 
 IWRAM_CODE ARM_CODE
@@ -216,9 +217,9 @@ void prc_on_oam_update(int sprid)
     {
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32+lut_spr_ycorr[flip_mode])|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
 #if GFX_SPR_FULLSET == 1
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4);
 #else
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
 #endif
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_ROT_SCALE(flip_mode)|OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32+lut_spr_xcorr[flip_mode])|ATTR1_SIZE_16;
     }
