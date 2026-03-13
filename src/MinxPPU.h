@@ -10,9 +10,9 @@
 #define GFX_MAP_SCR_ADR ((u16*)MAP_BASE_ADR(31))
 
 #define PRC_QUEUE_COPY_BG_GFX   (1<<0)
-#define PRC_QUEUE_COPY_SPR_GFX  (1<<2)
-#define PRC_QUEUE_FORCE_UPDATE  (1<<3)
-#define PRC_QUEUE_WAIT          (1<<4)
+#define PRC_QUEUE_COPY_SPR_GFX  (1<<1)
+#define PRC_QUEUE_FORCE_UPDATE  (1<<2)
+#define PRC_QUEUE_WAIT          (1<<3)
 
 // #define vSCREEN_XOFS 24
 // #define vSCREEN_YOFS 16
