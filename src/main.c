@@ -32,6 +32,7 @@ uint32_t frames= 0;
 const u16* bios_irq_vect= (u16*)bios_bin;
 
 bool option_mask_screen= true;
+bool option_72hz_refresh= false;
 
 const uint8_t PM_IO_INIT[256] = {
 	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
@@ -67,6 +68,15 @@ const uint8_t PM_IO_INIT[256] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // $F0~$F7 ???
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x40, 0xFF  // $F8~$FF LCD I/O
 };
+
+IWRAM_CODE ARM_CODE
+void isr_prc_copy_complete()
+{
+    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
+    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
+        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
+    frames++;
+}
 
 IWRAM_CODE ARM_CODE
 void isr_display()
@@ -136,10 +146,6 @@ void isr_display()
         //send_irq(VIRQ_TMR2_UPPER_UF);
         send_irq(VIRQ_INPUT_SHOCK);
 
-    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
-    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
-        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
-
     if (prc_pending_updates&PRC_QUEUE_WAIT)
     {
         //IF PRQ_QUEUE_WAIT is set, we shall wait until the flag stops bein set
@@ -153,7 +159,9 @@ void isr_display()
             prc_on_spr_addr_change();
     }
 
-    frames++;
+    if (!option_72hz_refresh)
+        isr_prc_copy_complete();
+
     irqEnable(IRQ_VBLANK);
 }
 
@@ -171,11 +179,18 @@ int main()
 {
     SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
     irqInit();
+    if (option_72hz_refresh)
+        irqEnable(IRQ_TIMER3);
     irqEnable(IRQ_VBLANK);
     irqEnable(IRQ_VCOUNT);
 
     irqSet(IRQ_VBLANK, isr_display);
+    irqSet(IRQ_TIMER3, isr_prc_copy_complete);
     irqSet(IRQ_VCOUNT, isr_vcount);
+
+    //Setup timer 3
+    REG_TM3CNT_L= -228; //-228 is Approx. 1/72 of a second
+    REG_TM3CNT_H= 0b11000011; //ENABLE|IRQ|FREQ_1024;
 
     prc_build_palette(128);
 
