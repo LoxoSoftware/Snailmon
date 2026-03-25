@@ -46,6 +46,8 @@
 #define GFX_MAP_CHR_ADR ((u16*)CHAR_BASE_ADR(prc_bg_tile_base))
 
 extern uint8_t minx_ram[];
+extern bool block_vblank_irq;
+extern bool option_thread_safe;
 
 const uint16_t lut_mapw[4]= { 12, 16, 24, 24 };
 const uint16_t lut_maph[4]= { 16, 12, 8, 16 };
@@ -112,6 +114,9 @@ void isr_vcount()
         REG_DISPSTAT= (REG_DISPSTAT&0xFF)|((REG_VCOUNT+16)<<8);
 
     MinxRegs[VREG_PRC_CNT]= REG_VCOUNT>>1;
+
+    if (!option_thread_safe)
+        block_vblank_irq= false;
 }
 
 IWRAM_CODE ARM_CODE

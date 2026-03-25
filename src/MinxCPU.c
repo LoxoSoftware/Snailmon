@@ -29,6 +29,8 @@ TMinxCPU MinxCPU;
 //extern TMinxPRC MinxPRC;
 EWRAM_DATA uint8_t minx_ram[4096];
 
+extern bool block_vblank_irq;
+
 //
 // Functions
 //
@@ -118,6 +120,7 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 	else
 	if (addr >= 0x001000 && addr <= 0x001FFF) //RAM
 	{
+		block_vblank_irq= true;
 		uint32_t addr_rel= (addr-0x1000)&0x0FFF;
 		minx_ram[addr_rel]= data;
 

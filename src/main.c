@@ -28,11 +28,13 @@ extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
 
 uint32_t frames= 0;
+bool block_vblank_irq= false;
 
 const u16* bios_irq_vect= (u16*)bios_bin;
 
 bool option_mask_screen= true;
-bool option_72hz_refresh= false;
+bool option_72hz_refresh= true;
+bool option_thread_safe= false;
 
 const uint8_t PM_IO_INIT[256] = {
 	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
@@ -72,6 +74,12 @@ const uint8_t PM_IO_INIT[256] = {
 IWRAM_CODE ARM_CODE
 void isr_prc_copy_complete()
 {
+    if (block_vblank_irq)
+    {
+        block_vblank_irq= false;
+        return;
+    }
+
     //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
     if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
         send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
@@ -82,6 +90,7 @@ IWRAM_CODE ARM_CODE
 void isr_display()
 {
     irqDisable(IRQ_VBLANK);
+    irqDisable(IRQ_TIMER3);
 
     REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
     REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
@@ -161,6 +170,8 @@ void isr_display()
 
     if (!option_72hz_refresh)
         isr_prc_copy_complete();
+    else
+        irqEnable(IRQ_TIMER3);
 
     irqEnable(IRQ_VBLANK);
 }
