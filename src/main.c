@@ -29,12 +29,13 @@ extern u8 minx_ram[];
 
 uint32_t frames= 0;
 bool block_vblank_irq= false;
+uint8_t block_vblank_irq_frames= 0;
 
 const u16* bios_irq_vect= (u16*)bios_bin;
 
 bool option_mask_screen= true;
-bool option_72hz_refresh= true;
-bool option_thread_safe= false;
+bool option_72hz_refresh= false;
+uint8_t option_thread_safety= 1; //0= Off, 1= Weak, 2= Strong
 
 const uint8_t PM_IO_INIT[256] = {
 	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
@@ -74,15 +75,18 @@ const uint8_t PM_IO_INIT[256] = {
 IWRAM_CODE ARM_CODE
 void isr_prc_copy_complete()
 {
-    if (block_vblank_irq)
+    if (block_vblank_irq_frames < 3) //Prevent deadlock
+    if (block_vblank_irq && option_thread_safety)
     {
         block_vblank_irq= false;
+        block_vblank_irq_frames++;
         return;
     }
+    block_vblank_irq_frames= 0;
 
     //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
-    if (!(frames&((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP)?1:3))) //Slow down the rate if software rendering
-        send_irq(VIRQ_PRC_COPY_DONE);                               // is detected (the GBA can't do it fast enough)
+    if (frames&1)
+        send_irq(VIRQ_PRC_COPY_DONE);
     frames++;
 }
 
