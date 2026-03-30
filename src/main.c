@@ -20,9 +20,12 @@
 #include <string.h>
 #include "include.h"
 #include "interrupt.h"
+#include "ui.h"
 
 #define vSCREEN_XOFS    24
 #define vSCREEN_YOFS    16
+
+#define UI_TILE_INDEX   1
 
 extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
@@ -33,9 +36,9 @@ uint8_t block_vblank_irq_frames= 0;
 
 const u16* bios_irq_vect= (u16*)bios_bin;
 
-bool option_mask_screen= true;
-bool option_72hz_refresh= false;
-uint8_t option_thread_safety= 1; //0= Off, 1= Weak, 2= Strong
+uint8_t option_mask_screen= 1;
+uint8_t option_72hz_refresh= 0;
+uint8_t option_thread_safety= 1; //0= Off, 1= Fast, 2= Safe
 
 const uint8_t PM_IO_INIT[256] = {
 	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
@@ -90,6 +93,8 @@ void isr_prc_copy_complete()
     frames++;
 }
 
+void go_menu();
+
 IWRAM_CODE ARM_CODE
 void isr_display()
 {
@@ -135,9 +140,10 @@ void isr_display()
     //Toggle screen mask
     if (kd&KEY_SELECT)
     {
-        option_mask_screen= !option_mask_screen;
-        SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
-        prc_pending_updates |= PRC_QUEUE_COPY_BG_GFX | PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE;
+        // option_mask_screen= !option_mask_screen;
+        // SetMode(MODE_1|BG2_ON|OBJ_ON|OBJ_1D_MAP|(option_mask_screen?WIN0_ON:0));
+        // prc_pending_updates |= PRC_QUEUE_COPY_BG_GFX | PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE;
+        go_menu();
     }
     if (kd&KEY_A)
         send_irq(VIRQ_INPUT_KEY_A);
@@ -178,6 +184,143 @@ void isr_display()
         irqEnable(IRQ_TIMER3);
 
     irqEnable(IRQ_VBLANK);
+}
+
+void ui_init()
+{
+    memcpy((u16*)TILE_BASE_ADR(3), uiTiles, uiTilesLen);
+    memcpy((u16*)BG_PALETTE+0xF0, uiPal, 32);
+    REG_BG0CNT= BG_16_COLOR | BG_SIZE_0 | BG_TILE_BASE(3) | BG_MAP_BASE(30);
+    REG_DISPCNT |= BG0_ENABLE;
+}
+
+void ui_clear()
+{
+    for (int i=0; i<32*32; i++)
+        ((u16*)MAP_BASE_ADR(30))[i]= 0xF000;
+}
+
+void ui_draw_frame(int x, int y, int w, int h)
+{
+    for (int iy=y; iy<y+h+2; iy++)
+    {
+        for (int ix=x; ix<x+w+2; ix++)
+        {
+            u16* tm= &((u16*)MAP_BASE_ADR(30))[ix+iy*32];
+
+            if (iy==y || iy==y+h+1)
+                *tm= 0xF003;
+            else if (ix==x)
+                *tm= 0xF005;
+            else if (ix==x+w+1)
+                *tm= 0xF006;
+            else
+                *tm= 0xF001;
+            if (ix==x && iy==y)
+                *tm= 0xF002;
+            else if (ix==x+w+1 && iy==y)
+                *tm= 0xF004;
+            else if (ix==x && iy==y+h+1)
+                *tm= 0xF007;
+            else if (ix==x+w+1 && iy==y+h+1)
+                *tm= 0xF009;
+        }
+    }
+}
+
+void ui_draw_char(int x, int y, char ch)
+{
+    ((u16*)MAP_BASE_ADR(30))[x+y*32]= 0xF000|ch;
+}
+
+void ui_draw_string(int x, int y, const char* str)
+{
+    int str_len= (int)(strchr(str, '#')-str);//strlen(str);
+
+    for (int i=0; i<str_len; i++)
+        ui_draw_char(x+i, y, str[i]);
+}
+
+void go_menu()
+{
+    int sel= 0;
+
+    ui_init();
+    ui_clear();
+    ui_draw_frame(0,0,20,3); //Main menu
+    ui_draw_frame(0,5,20,1); //Sleep notice
+    ui_draw_string(1,6, "PRESS START TO SLEEP#");
+
+    const char* menu_elems[]= {
+        "MASK DISPLAY # OFF#  ON##",
+        "COPY IRQ RATE#30HZ#36HZ##",
+        "THREAD SAFETY# OFF#FAST#SAFE#"
+    };
+    u8* menu_varptr[]=
+    {
+        &option_mask_screen,
+        &option_72hz_refresh,
+        &option_thread_safety,
+    };
+    const int menu_choices_len[]=
+    {
+        2,
+        2,
+        3,
+    };
+    int menu_elems_len= sizeof(menu_elems)/sizeof(char*);
+
+    void draw_menu(int x, int y, int sel)
+    {
+        int opt_len= (int)(strchr(menu_elems[0], '#')-menu_elems[0]);
+        int val_str_len= 5;//(int)(strchr(menu_elems[0]+opt_len+1, '#')-menu_elems[0]+opt_len+1);
+
+        for (int im=0; im<menu_elems_len; im++)
+        {
+            ui_draw_char(x, y+im, (sel==im)?0x0B:0x0A);
+            ui_draw_string(x+1, y+im, menu_elems[im]);
+            ui_draw_string(x+1+opt_len+2, y+im, (char*)(menu_elems[im]+opt_len+1+(val_str_len)*(*menu_varptr[im])));
+        }
+    }
+
+    draw_menu(1,1, sel);
+
+    scanKeys();
+    u16 kd= keysDown();
+
+    while(1)
+    {
+        if (kd&KEY_UP && sel>0)
+            draw_menu(1,1, --sel);
+        if (kd&KEY_DOWN && sel<menu_elems_len-1)
+            draw_menu(1,1, ++sel);
+        if (kd&KEY_A)
+        {
+            if (*menu_varptr[sel]+1<menu_choices_len[sel])
+                (*menu_varptr[sel])++;
+            else
+                (*menu_varptr[sel])= 0;
+            draw_menu(1,1, sel);
+        }
+        if (kd&KEY_START)
+        {
+            MinxCPU_OnSleep(0);
+            break;
+        }
+        if (kd&KEY_SELECT || kd&KEY_B)
+            break;
+
+        scanKeys();
+        kd= keysDown();
+    }
+
+    ui_clear();
+
+    //Force reload of tile gfx data
+    prc_pending_updates |= PRC_QUEUE_COPY_BG_GFX | PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE;
+    //Apply mask setting
+    REG_DISPCNT= REG_DISPCNT&(~WIN0_ON);
+    if (option_mask_screen) REG_DISPCNT |= WIN0_ON;
 }
 
 IWRAM_CODE ARM_CODE

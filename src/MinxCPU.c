@@ -242,7 +242,7 @@ void MinxCPU_OnSleep(int type)
 	irqDisable(IRQ_KEYPAD);
 
 	//MinxCPU.Status = MINX_STATUS_NORMAL;
-	SoftReset(0);
+	//SoftReset(0);
 }
 void MinxCPU_OnIRQHandle(uint8_t flag, uint8_t shift_u)
 {
