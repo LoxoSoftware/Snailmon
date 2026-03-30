@@ -249,7 +249,7 @@ void go_menu()
     ui_clear();
     ui_draw_frame(0,0,20,3); //Main menu
     ui_draw_frame(0,5,20,1); //Sleep notice
-    ui_draw_string(1,6, "PRESS START TO SLEEP#");
+    ui_draw_string(1,6, "Press START to sleep#");
 
     const char* menu_elems[]= {
         "MASK DISPLAY # OFF#  ON##",
