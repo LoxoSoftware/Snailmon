@@ -190,7 +190,7 @@ void ui_init()
 {
     memcpy((u16*)TILE_BASE_ADR(3), uiTiles, uiTilesLen);
     memcpy((u16*)BG_PALETTE+0xF0, uiPal, 32);
-    REG_BG0CNT= BG_16_COLOR | BG_SIZE_0 | BG_TILE_BASE(3) | BG_MAP_BASE(30);
+    REG_BG0CNT= BG_16_COLOR | BG_SIZE_0 | BG_TILE_BASE(3) | BG_MAP_BASE(30) | BG_PRIORITY(0);
     REG_DISPCNT |= BG0_ENABLE;
 }
 
@@ -358,7 +358,7 @@ int main()
         OAM[i].attr0= OBJ_Y(161)|ATTR0_DISABLED;
     }
 
-    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(31)|BG_256_COLOR;
+    REG_BG2CNT= ROTBG_SIZE_32|CHAR_BASE(0)|SCREEN_BASE(31)|BG_256_COLOR|BG_PRIORITY(3);
 
     //Set sprite affine matrix
     int sin_rot= -256;

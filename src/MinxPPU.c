@@ -240,9 +240,9 @@ void prc_on_oam_update(int sprid)
     {
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y((spr_oamptr[1]<<1)+vSCREEN_YOFS-32+lut_spr_ycorr[flip_mode])|ATTR0_COLOR_16|ATTR0_SQUARE|ATTR0_ROTSCALE_DOUBLE;
 #if GFX_SPR_FULLSET == 1
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*1024)+(spr_oamptr[2])*4)|ATTR2_PRIORITY(1);
 #else
-        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4);
+        OAM[GFX_SPR_SPRID+sprid].attr2= OBJ_PALETTE((spr_oamptr[3]&PRC_OAM3_INVERT)?1:0)|OBJ_CHAR((prc_spr_tile_base*512)+(spr_oamptr[2]&0x7F)*4)|ATTR2_PRIORITY(1);
 #endif
         OAM[GFX_SPR_SPRID+sprid].attr1= OBJ_ROT_SCALE(flip_mode)|OBJ_X((spr_oamptr[0]<<1)+vSCREEN_XOFS-32+lut_spr_xcorr[flip_mode])|ATTR1_SIZE_16;
     }
