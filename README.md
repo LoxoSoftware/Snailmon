@@ -6,8 +6,6 @@ Although the CPU runs at about 27% speed, some simple games are playable at near
 > ⚠️ **Photosensitivity warning**
 > 
 > Many Pokémon Mini games use a technique that strobes some parts of the image to simulate more shades of gray on the screen. Snailmon is not fast enough to do this at 60Hz so the strobing is going to be very noticeable. **If you are sensible to flashing colors please do not try this!**
-> 
-> I will try to implement a system that simulates more shades of gray in the future without strobing the screen, but it is still going to have some limitations.
 
 ### Usage
 1. Install the DevkitARM toolchain from [DevkitPro](https://devkitpro.org/wiki/Getting_Started)

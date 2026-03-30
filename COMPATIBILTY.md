@@ -11,6 +11,7 @@
 
 ### Working (mostly playable / playable but with issues)
 - "Biff" by Lupin, P0p | Runs slow
+- "Cortex (v0.7)" by PlayerOne | Runs slow | thread safety required
 - "EEPROM Browser" by Lupin | Technically works but the EEPROM is not implemented and it's unstable
 - "Flappy Bird" by Jhynjhiruu | Runs slow
 - "Game of Life" by DarkFader | Runs slow
@@ -22,5 +23,4 @@
 - "2048" by Zoranc | Crashes
 - "4 Color Demo" by Lupin | Does not start
 - "Bad Apple demo" by JustBurn, Mr. Blinky | Does not start
-- "Cortex (v0.7)" by PlayerOne | Crashes | Issue with deferred gfx update
 - Every commercial game
