@@ -26,6 +26,8 @@
 #include <gba_base.h>
 
 //#define _BIG_ENDIAN
+#define INSTR_FETCH_SPEEDUP //NOTE: Defining this will disable code execution
+							//      from RAM in the name of speed
 
 #ifdef _BIG_ENDIAN
 
@@ -169,9 +171,33 @@ void WriteMem16(uint32_t addr, uint16_t data)
 	MinxCPU_OnWrite(1, addr+1, data >> 8);
 }
 
+extern uint8_t rom_bin[];
+extern uint8_t bios_bin[];
+
+inline uint8_t FetchCode(uint32_t addr)
+{
+	if (addr&0xFFF000)
+		return rom_bin[addr&0x1FFFFF];
+	else
+		return bios_bin[addr&0x0FFF];
+}
+
 IWRAM_CODE ARM_CODE
 uint8_t Fetch8(void)
 {
+#ifdef INSTR_FETCH_SPEEDUP
+
+	if (MinxCPU.PC.W.L & 0x8000) {
+		// Banked area
+		MinxCPU.IR = FetchCode((MinxCPU.PC.W.L++ & 0x7FFF)| (MinxCPU.PC.B.I << 15));
+	} else {
+		// Unbanked area
+		MinxCPU.IR = FetchCode(MinxCPU.PC.W.L++);
+	}
+	return MinxCPU.IR;
+
+#else
+
 	if (MinxCPU.PC.W.L & 0x8000) {
 		// Banked area
 		MinxCPU.IR = MinxCPU_OnRead(1, (MinxCPU.PC.W.L++ & 0x7FFF) | (MinxCPU.PC.B.I << 15));
@@ -180,6 +206,8 @@ uint8_t Fetch8(void)
 		MinxCPU.IR = MinxCPU_OnRead(1, MinxCPU.PC.W.L++);
 	}
 	return MinxCPU.IR;
+
+#endif
 }
 
 IWRAM_CODE ARM_CODE

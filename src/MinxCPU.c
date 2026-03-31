@@ -95,17 +95,17 @@ int MinxCPU_CallIRQ(uint8_t addr)
 IWRAM_CODE ARM_CODE
 uint8_t MinxCPU_OnRead(int cpu, uint32_t addr)
 {
-    if (addr >= 0x000000 && addr <= 0x000FFF) //BIOS
-		return bios_bin[addr&0x0FFF];
+	if (addr >= 0x002100 && addr <= 0x1FFFFF) //Cart ROM
+		return rom_bin[(addr/*-0x2100*/)&0x1FFFFF];
 	else
 	if (addr >= 0x001000 && addr <= 0x001FFF) //RAM
 		return minx_ram[(addr-0x1000)&0x0FFF];
 	else
+	if (addr >= 0x000000 && addr <= 0x000FFF) //BIOS
+		return bios_bin[addr&0x0FFF];
+	else
 	if (addr >= 0x002000 && addr <= 0x0020FF) //Registers
 		return minx_read_reg(addr&0x0000FF);
-	else
-	if (addr >= 0x002100 && addr <= 0x1FFFFF) //Cart ROM
-		return rom_bin[(addr/*-0x2100*/)&0x1FFFFF];
 	else
 	if ((addr>>20) >= 2) //Cart ROM (mirror)
 		return rom_bin[addr&0x1FFFFF];
@@ -116,14 +116,10 @@ uint8_t MinxCPU_OnRead(int cpu, uint32_t addr)
 IWRAM_CODE ARM_CODE
 void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 {
-	if (addr >= 0x000000 && addr <= 0x000FFF) //BIOS
-		return;
-	else
 	if (addr >= 0x001000 && addr <= 0x001FFF) //RAM
 	{
-		//if (option_thread_safety)
-			block_vblank_irq= true;
-		uint32_t addr_rel= (addr-0x1000)&0x0FFF;
+		block_vblank_irq= true;
+		register uint32_t addr_rel= (addr-0x1000)&0x0FFF;
 		minx_ram[addr_rel]= data;
 
 		if (addr <= 0x0012FF) //Frame buffer write
@@ -177,6 +173,8 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 		return;
 	else
 	if ((addr>>20) >= 2) //Cart ROM (mirror)
+		return;
+	else
 		return;
 }
 
