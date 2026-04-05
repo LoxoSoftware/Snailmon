@@ -22,10 +22,12 @@
 #include "interrupt.h"
 #include "ui.h"
 
-#define vSCREEN_XOFS    24
-#define vSCREEN_YOFS    16
+#define vSCREEN_XOFS        24
+#define vSCREEN_YOFS        16
 
-#define UI_TILE_INDEX   1
+#define UI_TILE_INDEX       1
+
+#define CPU_DEBUG_MEMBASE   0x1000 //Offset in EWRAM
 
 extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
@@ -115,24 +117,6 @@ void isr_display()
         /* Le-> Le*/ ((REG_KEYINPUT) & 0b00100000) |
         /* Ri-> Ri*/ ((REG_KEYINPUT<<2) & 0b01000000) |
         /* St-> Pw*/ ((REG_KEYINPUT<<4) & 0b10000000);
-
-    ((u8*)EWRAM)[0x1000]= MinxCPU.PC.B.L;
-    ((u8*)EWRAM)[0x1001]= MinxCPU.PC.B.H;
-    ((u8*)EWRAM)[0x1002]= MinxCPU.PC.B.I;
-    ((u8*)EWRAM)[0x1003]= MinxCPU.PC.B.X;
-    ((u8*)EWRAM)[0x1004]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L));
-    ((u8*)EWRAM)[0x1005]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+1);
-    ((u8*)EWRAM)[0x1006]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+2);
-    ((u8*)EWRAM)[0x1007]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+3);
-    ((u8*)EWRAM)[0x1008]= MinxCPU.BA.B.L;
-    ((u8*)EWRAM)[0x1009]= MinxCPU.BA.B.H;
-    ((u8*)EWRAM)[0x100A]= MinxCPU.BA.B.I;
-    ((u8*)EWRAM)[0x100B]= MinxCPU.BA.B.X;
-    ((u8*)EWRAM)[0x100C]= MinxCPU.SP.B.L;
-    ((u8*)EWRAM)[0x100D]= MinxCPU.SP.B.H;
-    ((u8*)EWRAM)[0x100E]= MinxCPU.SP.B.I;
-    ((u8*)EWRAM)[0x100F]= MinxCPU.SP.B.X;
-    //*((u32*)0x2001010)= (u32)rom_bin;
 
     scanKeys();
     u16 kd= keysDown();
@@ -330,6 +314,26 @@ void mainloop()
     {
         //VBlankIntrWait();
         MinxCPU_Exec();
+
+#if MINXCPU_DEBUG == 1
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE  ]= MinxCPU.PC.B.L;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+1 ]= MinxCPU.PC.B.H;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+2 ]= MinxCPU.PC.B.I;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+3 ]= MinxCPU.PC.B.X;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+4 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L));
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+5 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+1);
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+6 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+2);
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+7 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+3);
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+8 ]= MinxCPU.BA.B.L;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+9 ]= MinxCPU.BA.B.H;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+10]= MinxCPU.BA.B.I;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+11]= MinxCPU.BA.B.X;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+12]= MinxCPU.SP.B.L;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+13]= MinxCPU.SP.B.H;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+14]= MinxCPU.SP.B.I;
+        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+15]= MinxCPU.SP.B.X;
+        //*((u32*)0x2001010)= (u32)rom_bin;
+#endif
     }
 }
 

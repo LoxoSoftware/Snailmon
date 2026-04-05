@@ -18,6 +18,8 @@
 
 ///// COMPILE-TIME OPTIMIZATION FLAGS /////
 
+#define MINXCPU_DEBUG   0       //Enable writing CPU debug information
+                                // in EWRAM
 #define GFX_SPR_FULLSET 0       //Enabling this will disable sprite caching
                                 // but the full tileset will be usable
 #define INSTR_FETCH_SPEEDUP 1   //Enabling this will disable code execution
