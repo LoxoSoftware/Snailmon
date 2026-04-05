@@ -16,6 +16,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "oflags.h"
 #include "rom_bin.h"
 #include "bios_bin.h"
 #include "MinxCPU.h"

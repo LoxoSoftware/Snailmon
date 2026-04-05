@@ -24,10 +24,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <gba_base.h>
+#include "oflags.h"
 
 //#define _BIG_ENDIAN
-#define INSTR_FETCH_SPEEDUP //NOTE: Defining this will disable code execution
-							//      from RAM in the name of speed
 
 #ifdef _BIG_ENDIAN
 
@@ -185,7 +184,7 @@ inline uint8_t FetchCode(uint32_t addr)
 IWRAM_CODE ARM_CODE
 uint8_t Fetch8(void)
 {
-#ifdef INSTR_FETCH_SPEEDUP
+#if INSTR_FETCH_SPEEDUP == 1
 
 	if (MinxCPU.PC.W.L & 0x8000) {
 		// Banked area

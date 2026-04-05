@@ -24,13 +24,6 @@
 #include <gba.h>
 #include "include.h"
 
-/// Optimization options ///
-
-#define GFX_SPR_FULLSET 0   //Enabling this will disable sprite caching
-                            // but the full tileset will be usable
-
-////////////////////////////
-
 #define vSCREEN_XOFS    24
 #define vSCREEN_YOFS    16
 
