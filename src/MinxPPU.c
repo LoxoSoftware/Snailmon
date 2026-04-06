@@ -106,7 +106,7 @@ void isr_vcount()
     else
         REG_DISPSTAT= (REG_DISPSTAT&0xFF)|((REG_VCOUNT+16)<<8);
 
-    MinxRegs[VREG_PRC_CNT]= REG_VCOUNT>>1;
+    MinxRegs[VREG_PRC_CNT]= (REG_VCOUNT>>1)+1;
 
     if (option_thread_safety == 1)
         block_vblank_irq= 0;

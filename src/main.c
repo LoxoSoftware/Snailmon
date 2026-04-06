@@ -91,7 +91,11 @@ void isr_prc_copy_complete()
 
     //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
     if (frames&1)
+    {
         send_irq(VIRQ_PRC_COPY_DONE);
+        send_irq(VIRQ_PRC_FRAMEDIV_OF);
+    }
+
     frames++;
 }
 
@@ -146,7 +150,7 @@ void isr_display()
     if (kd&KEY_START)
         send_irq(VIRQ_INPUT_KEY_POWER);
     if (kd&KEY_L)
-        //send_irq(VIRQ_TMR2_UPPER_UF);
+        //send_irq(VIRQ_PRC_FRAMEDIV_OF);
         send_irq(VIRQ_INPUT_SHOCK);
 
     if (prc_pending_updates&PRC_QUEUE_WAIT)
