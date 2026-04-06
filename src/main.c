@@ -307,32 +307,64 @@ void go_menu()
     if (option_mask_screen) REG_DISPCNT |= WIN0_ON;
 }
 
+uint8_t FetchCode_debug(uint32_t addr)
+{
+	if (addr&0xFFF000)
+		return rom_bin[addr&0x1FFFFF];
+	else
+		return bios_bin[addr&0x0FFF];
+}
+
+void cpu_debug_print()
+{
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE  ]= MinxCPU.PC.B.L;
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+1 ]= MinxCPU.PC.B.H;
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+2 ]= MinxCPU.PC.B.I;
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+3 ]= MinxCPU.PC.B.X;
+    uint32_t rom_fetch_addr;
+    if (MinxCPU.PC.W.L & 0x8000) {
+		// Banked area
+		rom_fetch_addr= (MinxCPU.PC.W.L & 0x7FFF)|(MinxCPU.PC.B.I << 15);
+	} else {
+		// Unbanked area
+		rom_fetch_addr= MinxCPU.PC.W.L;
+	}
+
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE]++;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+1 ]= rom_fetch_addr>>16;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+2 ]= (rom_fetch_addr>>8)&0xFF;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+3 ]= rom_fetch_addr&0xFF;
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+4 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L));
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+5 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+1);
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+6 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+2);
+    // ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+7 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+3);
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+4 ]= FetchCode_debug(rom_fetch_addr);
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+5 ]= FetchCode_debug(rom_fetch_addr+1);
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+6 ]= FetchCode_debug(rom_fetch_addr+2);
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+7 ]= FetchCode_debug(rom_fetch_addr+3);
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+8 ]= MinxCPU.HL.B.L;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+9 ]= MinxCPU.HL.B.H;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+10]= MinxCPU.HL.B.I;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+11]= MinxCPU.HL.B.X;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+12]= MinxCPU.SP.B.L;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+13]= MinxCPU.SP.B.H;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+14]= MinxCPU.SP.B.I;
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+15]= MinxCPU.SP.B.X;
+    //*((u32*)0x2001010)= (u32)rom_bin;
+}
+
 IWRAM_CODE ARM_CODE
 void mainloop()
 {
+    ((u8*)EWRAM)[CPU_DEBUG_MEMBASE]= 0x00; //Cycles counter (works in DEBUG mode)
+
     while (1)
     {
         //VBlankIntrWait();
         MinxCPU_Exec();
 
 #if MINXCPU_DEBUG == 1
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE  ]= MinxCPU.PC.B.L;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+1 ]= MinxCPU.PC.B.H;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+2 ]= MinxCPU.PC.B.I;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+3 ]= MinxCPU.PC.B.X;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+4 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L));
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+5 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+1);
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+6 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+2);
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+7 ]= MinxCPU_OnRead(0, ((MinxCPU.PC.W.H<<16)|MinxCPU.PC.W.L)+3);
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+8 ]= MinxCPU.BA.B.L;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+9 ]= MinxCPU.BA.B.H;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+10]= MinxCPU.BA.B.I;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+11]= MinxCPU.BA.B.X;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+12]= MinxCPU.SP.B.L;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+13]= MinxCPU.SP.B.H;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+14]= MinxCPU.SP.B.I;
-        ((u8*)EWRAM)[CPU_DEBUG_MEMBASE+15]= MinxCPU.SP.B.X;
-        //*((u32*)0x2001010)= (u32)rom_bin;
+        cpu_debug_print();
 #endif
     }
 }
