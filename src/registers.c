@@ -32,7 +32,10 @@ void minx_set_reg(int reg, uint8_t data)
     switch(reg)
     {
         case VREG_PRC_MODE:
+            if (data == MinxRegs[VREG_PRC_MODE_OLD])
+                break;
             MinxRegs[reg]= data;
+            MinxRegs[VREG_PRC_MODE_OLD]= data;
             switch ((data>>1)&0x07)
             {
                 case 0b000: case 0b010: case 0b001: case 0b011:
