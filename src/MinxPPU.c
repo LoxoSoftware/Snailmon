@@ -245,6 +245,7 @@ prc_spr_tile_copy_done:
     REG_IME= 1;
 }
 
+IWRAM_CODE ARM_CODE
 void prc_on_oam_update(int sprid)
 {
     uint8_t* spr_oamptr= &minx_ram[0x300+sprid*4];
