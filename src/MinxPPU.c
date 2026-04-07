@@ -195,6 +195,10 @@ void prc_on_spr_addr_change()
 
     prc_spr_tile_base= (prc_spr_tile_base+1)&1;
 #else
+    if (prc_spr_tile_base_cached[0] == tofs)
+        //Graphics already in memory
+        goto prc_spr_tile_copy_done;
+
     prc_spr_tile_base= 0;
 #endif
     prc_spr_tile_base_cached[prc_spr_tile_base]= tofs;
@@ -230,8 +234,8 @@ void prc_on_spr_addr_change()
         }
     }
 
-#if GFX_SPR_FULLSET == 0
 prc_spr_tile_copy_done:
+#if GFX_SPR_FULLSET == 0
 
     for (int i=0; i<24; i++)
         prc_on_oam_update(i);
