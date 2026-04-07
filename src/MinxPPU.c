@@ -37,6 +37,7 @@
 #define PRC_OAM3_ENABLE (1<<3)
 
 #define GFX_MAP_CHR_ADR ((u16*)CHAR_BASE_ADR(prc_bg_tile_base))
+#define GFX_MAP_SCR_ADR ((u16*)MAP_BASE_ADR(31))
 
 extern uint8_t minx_ram[];
 extern bool block_vblank_irq;
@@ -96,6 +97,22 @@ void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
                                 |((mask&0x20)?0:((shade>>5)&1)+1)<<8
                                 |((mask&0x40)?0:((shade>>6)&1)+1)<<4
                                 |((mask&0x80)?0:((shade>>7)&1)+1);
+}
+
+void host_map_write(uint16_t ofs, uint8_t data)
+{
+    if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
+        return;
+
+    //uint16_t map_rows= lut_maph[MinxRegs[VREG_PRC_MODE]>>4];
+    uint16_t map_cols= lut_mapw[MinxRegs[VREG_PRC_MODE]>>4];
+    uint16_t tile_row= (ofs/map_cols);
+    uint16_t tile_col= (ofs%map_cols);
+    uint16_t* vram_addr= &GFX_MAP_SCR_ADR[(tile_row+tile_col*32)>>1];
+    if (tile_row&1)
+        *vram_addr= (data<<8)|(*vram_addr&0x00FF);
+    else
+        *vram_addr= (*vram_addr&0xFF00)|data;
 }
 
 IWRAM_CODE ARM_CODE
@@ -241,6 +258,13 @@ void prc_on_oam_update(int sprid)
     }
     else
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y(180)|ATTR0_DISABLED;
+}
+
+void prc_on_map_update(uint16_t index)
+{
+    //Copy all of map data from PM to GBA
+    for (int i=0; i<lut_prc_map_bytes[MinxRegs[VREG_PRC_MODE]>>4]; i++)
+        host_map_write(i, minx_ram[0x360+i]);
 }
 
 void prc_on_fcopy_mode()

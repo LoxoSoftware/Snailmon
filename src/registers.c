@@ -45,6 +45,7 @@ void minx_set_reg(int reg, uint8_t data)
                     //Map rendering enabled
                     irqEnable(IRQ_VCOUNT);
                     REG_DISPCNT= (REG_DISPCNT&0xEB7F)|BG2_ON|(data&0x4?OBJ_ON:0);
+                    prc_on_map_update();
                     break;
                 case 0b100: case 0b110:
                     //Map rendering disabled

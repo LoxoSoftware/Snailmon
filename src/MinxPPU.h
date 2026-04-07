@@ -51,12 +51,14 @@ void prc_build_palette(int contrast);
 void host_vram_write(uint32_t ofs, uint8_t data);
 void host_vram_write_4bpp(uint32_t ofs, uint8_t data);
 void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask);
+void host_map_write(uint16_t ofs, uint8_t data);
 
 void isr_vcount();
 
 void prc_on_map_addr_change();
 void prc_on_spr_addr_change();
 void prc_on_oam_update(int sprid);
+void prc_on_map_update();
 void prc_on_fcopy_mode();
 
 #endif

@@ -143,16 +143,7 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 			if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
 				return;
 
-			uint16_t slot= (addr_rel-0x360);
-			//uint16_t map_rows= lut_maph[MinxRegs[VREG_PRC_MODE]>>4];
-			uint16_t map_cols= lut_mapw[MinxRegs[VREG_PRC_MODE]>>4];
-			uint16_t tile_row= (slot/map_cols);
-			uint16_t tile_col= (slot%map_cols);
-			uint16_t* vram_addr= &GFX_MAP_SCR_ADR[(tile_row+tile_col*32)>>1];
-			if (tile_row&1)
-				*vram_addr= (data<<8)|(*vram_addr&0x00FF);
-			else
-				*vram_addr= (*vram_addr&0xFF00)|data;
+			host_map_write(addr_rel-0x360, data);
 
 			return;
 		}
