@@ -33,6 +33,7 @@ typedef struct
     uint8_t cmd;
     uint8_t addr_lo;
     uint8_t addr_hi;
+    uint8_t data_read_done;
 } eeprom_stat_t;
 
 extern eeprom_stat_t* eeprom_stat;

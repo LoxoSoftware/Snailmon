@@ -49,6 +49,7 @@ void eeprom_send_byte(uint8_t data)
                 break;
             eeprom_stat->addr_hi= data;
             eeprom_stat->seq_ind++;
+            eeprom_stat->data_read_done= 0;
             return;
         case 3:
             //Enter low byte
@@ -70,7 +71,7 @@ void eeprom_send_bit(uint8_t bit)
         case 0:
             //Wait for start bit
             if (!bit)
-                goto seq_error;
+                goto seq_over;
             eeprom_stat->seq_ind++;
             return;
         case 1:
@@ -91,10 +92,10 @@ void eeprom_send_bit(uint8_t bit)
                 //Wait for stop bit and execute
                 if (!bit)
                     return;
-                    //goto seq_error;
+                    //goto seq_over;
                 eeprom_stat->bits_out= eeprom_raw_read((eeprom_stat->addr_lo)|(eeprom_stat->addr_hi<<8));
-                eeprom_stat->seq_ind= 0;
-                return;
+                eeprom_stat->data_read_done= 1;
+                goto seq_over;
             }
             else //Write data
             {
@@ -113,13 +114,13 @@ void eeprom_send_bit(uint8_t bit)
             //Wait for stop bit and execute (data write only)
             if (!bit)
                 return;
-                //goto seq_error;
+                //goto seq_over;
             eeprom_raw_write((eeprom_stat->addr_lo)|(eeprom_stat->addr_hi<<8), eeprom_stat->bits_in);
-            eeprom_stat->seq_ind= 0;
-            return;
+            goto seq_over;
         default:
-seq_error:
+seq_over:
             eeprom_stat->seq_ind= 0;
+            //eeprom_stat->clock= 0;
             return;
     }
 }
