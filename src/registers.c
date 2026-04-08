@@ -104,7 +104,7 @@ void minx_set_reg(int reg, uint8_t data)
                 {
                     //Output -> PM sends data
                     uint8_t bit_read= eeprom_receive_bit();
-                    MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xF7)|((bit_read&1)<<2);
+                    MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xFB)|((bit_read&1)<<2);
                 }
             }
 

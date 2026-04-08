@@ -126,7 +126,7 @@ seq_error:
 
 uint8_t eeprom_receive_bit()
 {
-    uint8_t result= eeprom_stat->bits_out>>7;
+    uint8_t result= (eeprom_stat->bits_out>>7)&1;
     eeprom_stat->bits_out= eeprom_stat->bits_out<<1;
     return result;
 }
