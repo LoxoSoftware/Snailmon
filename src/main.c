@@ -386,6 +386,8 @@ int main()
     irqSet(IRQ_TIMER3, isr_prc_copy_complete);
     irqSet(IRQ_VCOUNT, isr_vcount);
 
+    eeprom_init(); //Does not clear the eeprom
+
     //Setup timer 3
     REG_TM3CNT_L= -228; //-228 is Approx. 1/72 of a second
     REG_TM3CNT_H= 0b11000011; //ENABLE|IRQ|FREQ_1024;

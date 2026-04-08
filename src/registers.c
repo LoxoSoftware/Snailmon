@@ -88,9 +88,8 @@ void minx_set_reg(int reg, uint8_t data)
             MinxRegs[reg]= data;
 
             /// EEPROM ///
-            if (((data>>3)&1)/* != eeprom_stat->clock*/) //Check for EEPROM clock pulse
+            if ((data>>3)&1) //Check for EEPROM clock pulse
             {
-                //eeprom_stat->clock= (~eeprom_stat->clock)&1;
                 data &= 0xF7; //Unset clock bit
                 MinxRegs[reg]= data;
                 eeprom_stat->clock++;
@@ -103,13 +102,6 @@ void minx_set_reg(int reg, uint8_t data)
                 else
                 {
                     //Output -> PM sends data
-                    if (eeprom_stat->data_read_done)
-                    {
-                        //Send an ACK bit before sending the payload byte
-                        MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xFB)|(1<<2)/*|(1<<3)*/;
-                        eeprom_stat->data_read_done= 0;
-                        return;
-                    }
                     uint8_t bit_read= eeprom_receive_bit();
                     MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xFB)|((bit_read&1)<<2)/*|(1<<3)*/;
                 }
