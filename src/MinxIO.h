@@ -16,10 +16,30 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "oflags.h"
-#include "rom_bin.h"
-#include "bios_bin.h"
-#include "MinxCPU.h"
-#include "MinxPPU.h"
-#include "MinxIO.h"
-#include "registers.h"
+#ifndef MINXIO_H
+#define MINXIO_H
+
+#include <gba.h>
+
+#define EEPROM      ((u8*)SRAM)
+
+typedef struct
+{
+    uint8_t clock; //Used for debug purposes only
+    uint8_t bits_in;
+    uint8_t bits_in_index;
+    uint8_t bits_out;
+    uint8_t seq_ind;
+    uint8_t cmd;
+    uint8_t addr_lo;
+    uint8_t addr_hi;
+} eeprom_stat_t;
+
+extern eeprom_stat_t* eeprom_stat;
+
+//void eeprom_send_byte(uint8_t data);
+
+void eeprom_send_bit(uint8_t bit);
+uint8_t eeprom_receive_bit();
+
+#endif

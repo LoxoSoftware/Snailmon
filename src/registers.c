@@ -84,6 +84,31 @@ void minx_set_reg(int reg, uint8_t data)
             MinxRegs[reg]= 0x00;
             irq_act4_pending |= data;
             return;
+        case VREG_IO_DATA:
+            MinxRegs[reg]= data;
+
+            /// EEPROM ///
+            if (((data>>3)&1)/* != eeprom_stat->clock*/) //Check for EEPROM clock pulse
+            {
+                //eeprom_stat->clock= (~eeprom_stat->clock)&1;
+                data &= 0xF7; //Unset clock bit
+                MinxRegs[reg]= data;
+                eeprom_stat->clock++;
+
+                if ((MinxRegs[VREG_IO_DIR]>>2)&1) //Check for EEPROM data direction
+                {
+                    //Input -> PM receives data
+                    eeprom_send_bit((data>>2)&1);
+                }
+                else
+                {
+                    //Output -> PM sends data
+                    uint8_t bit_read= eeprom_receive_bit();
+                    MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xF7)|((bit_read&1)<<2);
+                }
+            }
+
+            return;
         default:
             MinxRegs[reg]= data;
             return;
