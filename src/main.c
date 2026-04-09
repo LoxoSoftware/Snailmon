@@ -34,6 +34,7 @@ extern u8 minx_ram[];
 
 uint32_t frames= 0;
 bool block_vblank_irq= false;
+bool eeprom_activity= false;
 uint8_t block_vblank_irq_frames= 0;
 
 const u16* bios_irq_vect= (u16*)bios_bin;
@@ -165,6 +166,11 @@ void isr_display()
         if (prc_pending_updates&PRC_QUEUE_COPY_SPR_GFX)
             prc_on_spr_addr_change();
     }
+
+    if (!eeprom_activity && eeprom_stat->clock > 0)
+        eeprom_init();
+    else
+        eeprom_activity= false;
 
     if (!option_72hz_refresh)
         isr_prc_copy_complete();

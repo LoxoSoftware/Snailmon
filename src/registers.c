@@ -27,6 +27,8 @@ extern uint8_t irq_act2_pending;
 extern uint8_t irq_act3_pending;
 extern uint8_t irq_act4_pending;
 
+extern bool eeprom_activity;
+
 void minx_set_reg(int reg, uint8_t data)
 {
     switch(reg)
@@ -90,6 +92,8 @@ void minx_set_reg(int reg, uint8_t data)
             /// EEPROM ///
             if ((data>>3)&1) //Check for EEPROM clock pulse
             {
+                eeprom_activity= true;
+
                 data &= 0xF7; //Unset clock bit
                 MinxRegs[reg]= data;
                 eeprom_stat->clock++;
