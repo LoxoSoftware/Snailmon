@@ -56,17 +56,47 @@ uint32_t prc_spr_tile_base_cached[2]= { 0xFFFFFFFF, 0xFFFFFFFF };
 uint8_t prc_bg_tile_base= 0;
 uint8_t prc_spr_tile_base= 0;
 
-void prc_build_palette(int contrast)
+typedef struct
 {
-    if (contrast >= 0)
+    int8_t r;
+    int8_t g;
+    int8_t b;
+} rgb_t;
+
+const rgb_t palette_low= (rgb_t){ 4, 6, 4 };
+const rgb_t palette_high= (rgb_t){ 24, 26, 24 };
+
+void prc_build_palette()
+{
+    //Contrast is from 0 to 64 with a negative value representing inversion state
+
+    if (!lcd_invert)
     {
-        BG_PALETTE[0x01]= RGB5(4,6,4);
-        BG_PALETTE[0x00]= RGB5(24,28,24);
+        rgb_t new_low= (rgb_t)
+        {
+            palette_high.r-(lcd_contrast/2),
+            palette_high.g-(lcd_contrast/2),
+            palette_high.b-(lcd_contrast/2)
+        };
+
+        BG_PALETTE[0x01]= RGB5((new_low.r<palette_low.r)? palette_low.r : new_low.r,
+                               (new_low.g<palette_low.g)? palette_low.g : new_low.g,
+                               (new_low.b<palette_low.b)? palette_low.b : new_low.b);
+        BG_PALETTE[0x00]= RGB5(palette_high.r, palette_high.g, palette_high.b);
     }
     else
     {
-        BG_PALETTE[0x00]= RGB5(4,6,4);
-        BG_PALETTE[0x01]= RGB5(24,28,24);
+        rgb_t new_high= (rgb_t)
+        {
+            palette_low.r+(lcd_contrast/2),
+            palette_low.g+(lcd_contrast/2),
+            palette_low.b+(lcd_contrast/2)
+        };
+
+        BG_PALETTE[0x00]= RGB5(palette_low.r, palette_low.g, palette_low.b);
+        BG_PALETTE[0x01]= RGB5((new_high.r>palette_high.r)? palette_high.r : new_high.r,
+                               (new_high.g>palette_high.g)? palette_high.g : new_high.g,
+                               (new_high.b>palette_high.b)? palette_high.b : new_high.b);
     }
 
     SPRITE_PALETTE[0x00]= RGB5(31,0,31);

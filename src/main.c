@@ -398,7 +398,7 @@ int main()
     REG_TM3CNT_L= -228; //-228 is Approx. 1/72 of a second
     REG_TM3CNT_H= 0b11000011; //ENABLE|IRQ|FREQ_1024;
 
-    prc_build_palette(128);
+    prc_build_palette();
 
     //Disable all sprites
     for (int i=0; i<128; i++)

@@ -46,7 +46,7 @@ extern uint8_t prc_pending_updates;
 extern uint32_t prc_map_tile_base_cached[2];
 extern uint32_t prc_spr_tile_base_cached[2];
 
-void prc_build_palette(int contrast);
+void prc_build_palette(); //Uses contrast and inversion state from MinxIO
 
 void host_vram_write(uint32_t ofs, uint8_t data);
 void host_vram_write_4bpp(uint32_t ofs, uint8_t data);

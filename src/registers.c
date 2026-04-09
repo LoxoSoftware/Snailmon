@@ -112,6 +112,10 @@ void minx_set_reg(int reg, uint8_t data)
             }
 
             return;
+        case VREG_LCD_CTRL:
+            MinxRegs[reg]= data;
+            lcd_send_cmd(data);
+            return;
         default:
             MinxRegs[reg]= data;
             return;

@@ -24,6 +24,10 @@
 
 eeprom_stat_t* eeprom_stat= (eeprom_stat_t*)(EWRAM+0x1200);
 
+uint8_t lcd_cmd= 0x00;
+ int8_t lcd_contrast= 0x3F;
+   bool lcd_invert= false;
+
 void eeprom_init()
 {
     eeprom_stat->clock= 0;
@@ -168,4 +172,37 @@ uint8_t eeprom_receive_bit()
     uint8_t result= (eeprom_stat->bits_out>>7)&1;
     eeprom_stat->bits_out= eeprom_stat->bits_out<<1;
     return result;
+}
+
+void lcd_send_cmd(uint8_t cmd)
+{
+    //Commands that don't need an additional data byte
+    if (lcd_cmd == 0x00)
+    switch (cmd)
+    {
+        case 0xA6:
+        case 0xA7: //Display invert
+            lcd_invert= cmd&1;
+            prc_build_palette();
+            break;
+        //Handle cases for commands that need an additional data byte//
+        case 0x81:
+            lcd_cmd= cmd;
+            return;
+        //                                                           //
+        default:
+            return;
+    }
+
+    switch (lcd_cmd)
+    {
+        case 0x81: //Contrast adjust
+            lcd_contrast= cmd&0x3F;
+            prc_build_palette();
+            break;
+        default:
+            break;
+    }
+
+    lcd_cmd= 0x00;
 }

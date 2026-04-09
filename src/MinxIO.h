@@ -49,11 +49,16 @@ typedef struct
 
 extern eeprom_stat_t* eeprom_stat;
 
+extern int8_t lcd_contrast;
+extern bool lcd_invert;
+
 //void eeprom_send_byte(uint8_t data);
 
 void eeprom_init();
 
 void eeprom_send_bit(uint8_t bit);
 uint8_t eeprom_receive_bit();
+
+void lcd_send_cmd(uint8_t cmd);
 
 #endif
