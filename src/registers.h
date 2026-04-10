@@ -76,8 +76,10 @@ enum
     VREG_PRC_SPR_MID=   0x88,
     VREG_PRC_SPR_HI=    0x89,
     VREG_PRC_CNT=       0x8A,
-    VREG_PRC_MODE_OLD=  0x90, //Not an actual register
     VREG_LCD_CTRL=      0xFE,
+    //Fake registers
+    VREG_PRC_MODE_OLD=  0x90,
+    VREG_IO_DATA_OLD=   0x91,
 };
 
 //extern uint8_t MinxRegs[256];

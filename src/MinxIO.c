@@ -38,7 +38,7 @@ void eeprom_init()
     eeprom_stat->cmd= 0;
     eeprom_stat->addr= 0;
     eeprom_stat->ack= 0;
-    eeprom_stat->write_protect= 1;
+    eeprom_stat->write_protect= 0;
 }
 
 inline uint8_t eeprom_raw_read(uint16_t ofs)
@@ -63,8 +63,6 @@ void eeprom_send_byte(uint8_t data)
                 eeprom_stat->seq_ind= EEPROM_SEQ_IDLE;
                 return;
             }
-            eeprom_stat->seq_ind++;
-            //eeprom_stat->ack= 1;
 
             if (eeprom_stat->cmd&0x01)
             {
@@ -72,9 +70,11 @@ void eeprom_send_byte(uint8_t data)
                 eeprom_stat->seq_ind= EEPROM_SEQ_SREAD_BYTES;
                 //Do the first byte read
                 eeprom_stat->bits_out= eeprom_raw_read(eeprom_stat->addr++);
-                eeprom_stat->ack= 1;
+                //eeprom_stat->ack= 1;
                 break;
             }
+            else
+                eeprom_stat->seq_ind= EEPROM_SEQ_ADDR_HI;
             break;
         case EEPROM_SEQ_ADDR_HI:
             //Enter high byte
@@ -92,10 +92,9 @@ void eeprom_send_byte(uint8_t data)
             // Enter write payload byte
             if (!eeprom_stat->write_protect)
             {
-                eeprom_raw_write(eeprom_stat->addr, data);
+                eeprom_raw_write(eeprom_stat->addr++, data);
+                //eeprom_stat->ack= 1;
             }
-            eeprom_stat->seq_ind++;
-            eeprom_stat->ack= 0;
             break;
         case EEPROM_SEQ_SREAD_BYTES: //Sequential read
             break;
@@ -106,31 +105,48 @@ void eeprom_send_byte(uint8_t data)
     }
 }
 
-void eeprom_send_bit(uint8_t bit)
+void eeprom_send_bit(uint8_t bit, uint8_t clock)
 {
-    eeprom_stat->ack= 0;
+    if (eeprom_stat->ack & clock)
+    {
+        eeprom_stat->ack--;
+    }
 
+    uint8_t rising_bit= (bit&1) & (~MinxRegs[VREG_IO_DATA_OLD]>>2);
+    uint8_t falling_bit= ((~bit)&1) & (MinxRegs[VREG_IO_DATA_OLD]>>2);
+
+    //Start command
+    if (falling_bit && clock)
+    {
+        eeprom_stat->bits_in_index= 0;
+        eeprom_stat->seq_ind= EEPROM_SEQ_CMD;
+        return;
+    }
+    //Stop command
+    if (rising_bit && clock)
+    {
+        if (eeprom_stat->seq_ind == EEPROM_SEQ_WR_BYTE)
+        {
+            eeprom_send_byte(eeprom_stat->bits_in);
+            eeprom_stat->ack= 0;
+        }
+        eeprom_stat->clock= 0;
+        eeprom_stat->bits_in_index= 0;
+        eeprom_stat->seq_ind= EEPROM_SEQ_IDLE;
+        return;
+    }
+
+    if (clock)
     switch (eeprom_stat->seq_ind)
     {
         case EEPROM_SEQ_IDLE:
             //Wait for start bit
-            if (!bit)
-                return;
-            eeprom_stat->seq_ind++;
+            eeprom_stat->bits_in_index= 0;
             return;
         case EEPROM_SEQ_CMD:
         case EEPROM_SEQ_ADDR_HI:
         case EEPROM_SEQ_ADDR_LOW:
         case EEPROM_SEQ_WR_BYTE:
-            //Wait for an instruction byte or a start bit
-            if (eeprom_stat->seq_ind == EEPROM_SEQ_WR_BYTE && eeprom_stat->write_protect)
-            {
-                //Terminate byte write command if write protection is on
-                if (!bit)
-                    return;
-                eeprom_stat->bits_in_index= -1; //Discard ACK bit
-                eeprom_stat->seq_ind= 1;
-            }
             eeprom_stat->bits_in= (eeprom_stat->bits_in<<1)|(bit&1);
             eeprom_stat->bits_in_index++;
             if (eeprom_stat->bits_in_index >= 8)
@@ -139,21 +155,12 @@ void eeprom_send_bit(uint8_t bit)
                 eeprom_send_byte(eeprom_stat->bits_in);
             }
             return;
-        case EEPROM_SEQ_WR_BYTE_AWAIT:
-            //Wait for stop bit
-            if (!bit)
-                return;
-            eeprom_raw_write(eeprom_stat->addr, eeprom_stat->bits_in);
-            goto seq_over;
-            return;
         case EEPROM_SEQ_SREAD_BYTES:
             //Sequential read mode, stop if the stop bit is received
-            if (bit)
-                goto seq_over;
             eeprom_stat->bits_out= eeprom_raw_read(eeprom_stat->addr++);
+            eeprom_stat->ack= 1;
             return;
         default:
-seq_over:
             eeprom_stat->bits_in_index= 0;
             eeprom_stat->seq_ind= EEPROM_SEQ_IDLE;
             //eeprom_stat->clock= 0;
@@ -161,8 +168,11 @@ seq_over:
     }
 }
 
-uint8_t eeprom_receive_bit()
+uint8_t eeprom_receive_bit(uint8_t clock)
 {
+    if (!clock)
+        return 0;
+
     if (eeprom_stat->ack)
     {
         eeprom_stat->ack--;

@@ -56,8 +56,8 @@ extern bool lcd_invert;
 
 void eeprom_init();
 
-void eeprom_send_bit(uint8_t bit);
-uint8_t eeprom_receive_bit();
+void eeprom_send_bit(uint8_t bit, uint8_t clock);
+uint8_t eeprom_receive_bit(uint8_t clock);
 
 void lcd_send_cmd(uint8_t cmd);
 

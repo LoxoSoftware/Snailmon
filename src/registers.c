@@ -93,28 +93,29 @@ void minx_set_reg(int reg, uint8_t data)
             if ((data>>3)&1) //Check for EEPROM clock pulse
             {
                 eeprom_activity= true;
-
-                data &= 0xF7; //Unset clock bit
-                MinxRegs[reg]= data;
-                eeprom_stat->clock++;
-
-                if ((MinxRegs[VREG_IO_DIR]>>2)&1) //Check for EEPROM data direction
-                {
-                    //Input -> PM receives data
-                    eeprom_send_bit((data>>2)&1);
-                }
-                else
-                {
-                    //Output -> PM sends data
-                    uint8_t bit_read= eeprom_receive_bit();
-                    MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xFB)|((bit_read&1)<<2)/*|(1<<3)*/;
-                }
             }
+
+            if ((MinxRegs[VREG_IO_DIR]>>2)&1) //Check for EEPROM data direction
+            {
+                //Input -> PM receives data
+                eeprom_send_bit((data>>2)&1, (data>>3)&1);
+            }
+            else
+            {
+                //Output -> PM sends data
+                uint8_t bit_read= eeprom_receive_bit((data>>3)&1);
+                MinxRegs[VREG_IO_DATA]= (MinxRegs[VREG_IO_DATA]&0xFB)|((bit_read&1)<<2);
+            }
+
+            eeprom_stat->clock++;
+            MinxRegs[VREG_IO_DATA_OLD]= MinxRegs[VREG_IO_DATA];
 
             return;
         case VREG_LCD_CTRL:
             MinxRegs[reg]= data;
             lcd_send_cmd(data);
+            return;
+        case 0x90: case 0x91:
             return;
         default:
             MinxRegs[reg]= data;
