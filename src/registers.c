@@ -115,6 +115,20 @@ void minx_set_reg(int reg, uint8_t data)
             MinxRegs[reg]= data;
             lcd_send_cmd(data);
             return;
+        case VREG_SEC_CTRL:
+            MinxRegs[reg]= data;
+            if (data&2)
+            {
+                //Reset second counter
+                MinxRegs[VREG_SEC_CNT_LO]= 0;
+                MinxRegs[VREG_SEC_CNT_MID]= 0;
+                MinxRegs[VREG_SEC_CNT_HI]= 0;
+                MinxRegs[reg]= MinxRegs[reg]&0x01;
+            }
+            return;
+        case VREG_SEC_CNT_LO: case VREG_SEC_CNT_MID: case VREG_SEC_CNT_HI:
+            //Read-only register
+            return;
         case 0x90: case 0x91:
             return;
         default:
@@ -131,4 +145,16 @@ uint8_t minx_read_reg(int reg)
     //         return 0x00;
     // }
     return MinxRegs[reg];
+}
+
+void reg_sec_counter_increment()
+{
+    if (!(MinxRegs[VREG_SEC_CTRL]&1))
+        return; //Second counter is not enabled
+
+    uint32_t val= MinxRegs[VREG_SEC_CNT_LO]|(MinxRegs[VREG_SEC_CNT_MID]<<8)|(MinxRegs[VREG_SEC_CNT_HI]<<16);
+    val++;
+    MinxRegs[VREG_SEC_CNT_LO]= val&0x0000FF;
+    MinxRegs[VREG_SEC_CNT_MID]= (val>>8)&0x0000FF;
+    MinxRegs[VREG_SEC_CNT_HI]= (val>>16)&0x0000FF;
 }

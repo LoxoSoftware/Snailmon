@@ -172,6 +172,12 @@ void isr_display()
     else
         eeprom_activity= false;
 
+    if (frames == 59)
+    {
+        reg_sec_counter_increment();
+        frames= 0;
+    }
+
     if (!option_72hz_refresh)
         isr_prc_copy_complete();
     else

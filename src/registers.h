@@ -30,6 +30,10 @@ enum
     VREG_SYS_CTRL1=     0x00,
     VREG_SYS_CTRL2=     0x01,
     VREG_SYS_CTRL3=     0x02,
+    VREG_SEC_CTRL=      0x08,
+    VREG_SEC_CNT_LO=    0x09,
+    VREG_SEC_CNT_MID=   0x0A,
+    VREG_SEC_CNT_HI=    0x0B,
     VREG_TMR1_SCALE=    0x18,
     VREG_TMR1_OSC=      0x19,
     VREG_TMR2_SCALE=    0x1A,
@@ -88,5 +92,7 @@ extern uint8_t* MinxRegs;
 void minx_set_reg(int reg, uint8_t data);
 
 uint8_t minx_read_reg(int reg);
+
+void reg_sec_counter_increment();
 
 #endif
