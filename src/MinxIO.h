@@ -30,7 +30,6 @@ typedef enum
     EEPROM_SEQ_ADDR_HI=       2,
     EEPROM_SEQ_ADDR_LOW=      3,
     EEPROM_SEQ_WR_BYTE=       4,
-    EEPROM_SEQ_WR_BYTE_AWAIT= 5,
     EEPROM_SEQ_SREAD_BYTES=   10,
 } eeprom_seq_t;
 
@@ -40,9 +39,9 @@ typedef struct
     uint8_t       bits_in;
      int8_t       bits_in_index;
     uint8_t       bits_out;
+     int8_t       bits_out_index;
     eeprom_seq_t  seq_ind;
     uint8_t       cmd;
-    uint8_t       ack;
     uint16_t      addr; //Remember to align members!
     uint8_t       write_protect;
 } eeprom_stat_t;
