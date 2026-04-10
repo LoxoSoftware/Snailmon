@@ -72,8 +72,6 @@ void eeprom_send_byte(uint8_t data)
                 //Do the first byte read
                 eeprom_stat->bits_out= eeprom_raw_read(eeprom_stat->addr++);
                 eeprom_stat->bits_out_index= 8;
-                //eeprom_stat->bits_out >>= 1;
-                //MinxRegs[VREG_IO_DATA] |= ((eeprom_receive_bit(1)&1)<<2);
                 break;
             }
             else
@@ -104,6 +102,9 @@ void eeprom_send_byte(uint8_t data)
     }
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O1")
+
 void eeprom_send_bit(uint8_t bit, uint8_t clock)
 {
     uint8_t rising_bit= (bit&1) & (~MinxRegs[VREG_IO_DATA_OLD]>>2);
@@ -113,6 +114,8 @@ void eeprom_send_bit(uint8_t bit, uint8_t clock)
     if (falling_bit && clock)
     {
         eeprom_stat->bits_in_index= 0;
+        eeprom_stat->bits_out_index= 0;
+        eeprom_stat->bits_out= 0;
         eeprom_stat->seq_ind= EEPROM_SEQ_CMD;
         return;
     }
@@ -121,6 +124,8 @@ void eeprom_send_bit(uint8_t bit, uint8_t clock)
     {
         eeprom_stat->clock= 0;
         eeprom_stat->bits_in_index= 0;
+        eeprom_stat->bits_out_index= 0;
+        eeprom_stat->bits_out= 0;
         eeprom_stat->seq_ind= EEPROM_SEQ_IDLE;
         return;
     }
@@ -152,7 +157,6 @@ void eeprom_send_bit(uint8_t bit, uint8_t clock)
         default:
             eeprom_stat->bits_in_index= 0;
             eeprom_stat->seq_ind= EEPROM_SEQ_IDLE;
-            //eeprom_stat->clock= 0;
             return;
     }
 }
@@ -181,6 +185,8 @@ uint8_t eeprom_receive_bit(uint8_t clock)
 
     return result;
 }
+
+#pragma GCC pop_options
 
 void lcd_send_cmd(uint8_t cmd)
 {
