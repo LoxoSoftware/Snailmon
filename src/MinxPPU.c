@@ -63,15 +63,17 @@ typedef struct
     int8_t b;
 } rgb_t;
 
-const rgb_t palette_low[3]= {
-    (rgb_t){ 4, 6, 4 }, //LCD palette
-    (rgb_t){ 0, 0, 0 }, //B&W palette
-    (rgb_t){ 4, 8, 0 }, //DMG palette
+const rgb_t palette_low[4]= {
+    (rgb_t){ 4,  6, 4 }, //LCD  palette
+    (rgb_t){ 0,  0, 0 }, //B&W  palette
+    (rgb_t){ 4,  8, 0 }, //DMG1 palette
+    (rgb_t){ 3, 10, 6 }, //DMG2 palette
 };
-const rgb_t palette_high[3]= {
-    (rgb_t){ 24, 26, 24 }, //LCD palette
-    (rgb_t){ 31, 31, 31 }, //B&W palette
-    (rgb_t){ 30, 31,  0 }, //DMG palette
+const rgb_t palette_high[4]= {
+    (rgb_t){ 24, 26, 24 }, //LCD  palette
+    (rgb_t){ 31, 31, 31 }, //B&W  palette
+    (rgb_t){ 30, 31,  0 }, //DMG1 palette
+    (rgb_t){ 20, 31,  8 }, //DMG2 palette
 };
 
 void prc_build_palette()

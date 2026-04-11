@@ -248,7 +248,7 @@ void go_menu()
 
     const char* menu_elems[]= {
         "MASK DISPLAY # OFF#  ON##",
-        "PALETTE      # LCD# B&W# DMG#",
+        "PALETTE      # LCD# B&W#DMG1#DMG2##",
         "FRAME DIVIDER#30HZ#36HZ##",
         "THREAD SAFETY# OFF#FAST#SAFE#"
     };
@@ -262,7 +262,7 @@ void go_menu()
     const int menu_choices_len[]=
     {
         2,
-        3,
+        4,
         2,
         3,
     };
