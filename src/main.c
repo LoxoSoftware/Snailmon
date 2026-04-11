@@ -238,27 +238,31 @@ void ui_draw_string(int x, int y, const char* str)
 void go_menu()
 {
     int sel= 0;
+    const int options= 4;
 
     ui_init();
     ui_clear();
-    ui_draw_frame(0,0,20,3); //Main menu
-    ui_draw_frame(0,5,20,1); //Sleep notice
-    ui_draw_string(1,6, "Press START to sleep#");
+    ui_draw_frame(0,0,20,options); //Main menu
+    ui_draw_frame(0,options+2,20,1); //Sleep notice
+    ui_draw_string(1,options+3, "Press START to sleep#");
 
     const char* menu_elems[]= {
         "MASK DISPLAY # OFF#  ON##",
-        "COPY IRQ RATE#30HZ#36HZ##",
+        "PALETTE      # LCD# B&W# DMG#",
+        "FRAME DIVIDER#30HZ#36HZ##",
         "THREAD SAFETY# OFF#FAST#SAFE#"
     };
     u8* menu_varptr[]=
     {
         &option_mask_screen,
+        &MinxRegs[VREG_PRC_PALETTE],
         &option_72hz_refresh,
         &option_thread_safety,
     };
     const int menu_choices_len[]=
     {
         2,
+        3,
         2,
         3,
     };
@@ -315,6 +319,8 @@ void go_menu()
     //Apply mask setting
     REG_DISPCNT= REG_DISPCNT&(~WIN0_ON);
     if (option_mask_screen) REG_DISPCNT |= WIN0_ON;
+    //Rebuild palette
+    prc_build_palette();
 }
 
 uint8_t FetchCode_debug(uint32_t addr)
