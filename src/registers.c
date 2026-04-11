@@ -32,31 +32,7 @@ void minx_set_reg(int reg, uint8_t data)
     switch(reg)
     {
         case VREG_PRC_MODE:
-            if (data == MinxRegs[VREG_PRC_MODE_OLD])
-                break;
             MinxRegs[reg]= data;
-            MinxRegs[VREG_PRC_MODE_OLD]= data;
-            switch ((data>>1)&0x07)
-            {
-                case 0b000: case 0b010: case 0b001: case 0b011:
-                    //PRC disabled (no frame copy)
-                    irqDisable(IRQ_VCOUNT);
-                    //REG_DISPCNT= (REG_DISPCNT&0xFF7F)|LCDC_OFF;
-                    REG_DISPCNT= (REG_DISPCNT&0xEB7F);
-                    break;
-                case 0b101: case 0b111:
-                    //Map rendering enabled
-                    irqEnable(IRQ_VCOUNT);
-                    REG_DISPCNT= (REG_DISPCNT&0xEB7F)|BG2_ON|(data&0x4?OBJ_ON:0);
-                    prc_on_map_update();
-                    break;
-                case 0b100: case 0b110:
-                    //Map rendering disabled
-                    irqEnable(IRQ_VCOUNT);
-                    REG_DISPCNT= (REG_DISPCNT&0xEB7F)|BG2_ON|(data&0x4?OBJ_ON:0);
-                    prc_on_fcopy_mode();
-                    break;
-            }
             return;
         case VREG_PRC_MAP_LO: case VREG_PRC_MAP_MID: case VREG_PRC_MAP_HI:
             MinxRegs[reg]= data;

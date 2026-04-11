@@ -318,7 +318,7 @@ void prc_on_oam_update(int sprid)
         OAM[GFX_SPR_SPRID+sprid].attr0= OBJ_Y(180)|ATTR0_DISABLED;
 }
 
-void prc_on_map_update(uint16_t index)
+void prc_on_map_update()
 {
     //Copy all of map data from PM to GBA
     for (int i=0; i<lut_prc_map_bytes[MinxRegs[VREG_PRC_MODE]>>4]; i++)
@@ -332,6 +332,33 @@ void prc_on_fcopy_mode()
     {
         for (int ix=0; ix<8; ix+=2)
             ((u16*)MAP_BASE_ADR(31))[(ix+iy*32)>>1]= (iy+ix*12)|((iy+(ix+1)*12)<<8);
+    }
+}
+
+void prc_on_mode_set()
+{
+    uint8_t data= MinxRegs[VREG_PRC_MODE];
+
+    switch ((data>>1)&0x07)
+    {
+        case 0b000: case 0b010: case 0b001: case 0b011:
+            //PRC disabled (no frame copy)
+            //irqDisable(IRQ_VCOUNT);
+            //REG_DISPCNT= (REG_DISPCNT&0xFF7F)|LCDC_OFF;
+            REG_DISPCNT= (REG_DISPCNT&0xEB7F);
+            break;
+        case 0b101: case 0b111:
+            //Map rendering enabled
+            irqEnable(IRQ_VCOUNT);
+            REG_DISPCNT= (REG_DISPCNT&0xEB7F)|BG2_ON|(data&0x4?OBJ_ON:0);
+            prc_on_map_update();
+            break;
+        case 0b100: case 0b110:
+            //Map rendering disabled
+            irqEnable(IRQ_VCOUNT);
+            REG_DISPCNT= (REG_DISPCNT&0xEB7F)|BG2_ON|(data&0x4?OBJ_ON:0);
+            prc_on_fcopy_mode();
+            break;
     }
 }
 

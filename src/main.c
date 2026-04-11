@@ -166,6 +166,12 @@ void isr_display()
             prc_on_spr_addr_change();
     }
 
+    if (MinxRegs[VREG_PRC_MODE] != MinxRegs[VREG_PRC_MODE_OLD])
+    {
+        prc_on_mode_set();
+        MinxRegs[VREG_PRC_MODE_OLD]= MinxRegs[VREG_PRC_MODE];
+    }
+
     if (frames == 59)
     {
         reg_sec_counter_increment();
