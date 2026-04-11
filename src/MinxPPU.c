@@ -75,6 +75,12 @@ const rgb_t palette_high[4]= {
     (rgb_t){ 30, 31,  0 }, //DMG1 palette
     (rgb_t){ 20, 31,  8 }, //DMG2 palette
 };
+const rgb_t palette_bg[4]= {
+    (rgb_t){ 24, 26, 24 }, //LCD  palette
+    (rgb_t){ 31, 31, 31 }, //B&W  palette
+    (rgb_t){ 30, 31,  0 }, //DMG1 palette
+    (rgb_t){ 31, 26,  6 }, //DMG2 palette
+};
 
 void prc_build_palette()
 {
@@ -92,10 +98,10 @@ void prc_build_palette()
             palette_high[pal].b-(new_contrast)
         };
 
-        BG_PALETTE[0x01]= RGB5((new_low.r<palette_low[pal].r)? palette_low[pal].r : new_low.r,
+        BG_PALETTE[0x02]= RGB5((new_low.r<palette_low[pal].r)? palette_low[pal].r : new_low.r,
                                (new_low.g<palette_low[pal].g)? palette_low[pal].g : new_low.g,
                                (new_low.b<palette_low[pal].b)? palette_low[pal].b : new_low.b);
-        BG_PALETTE[0x00]= RGB5(palette_high[pal].r, palette_high[pal].g, palette_high[pal].b);
+        BG_PALETTE[0x01]= RGB5(palette_high[pal].r, palette_high[pal].g, palette_high[pal].b);
     }
     else
     {
@@ -106,27 +112,31 @@ void prc_build_palette()
             palette_low[pal].b+(new_contrast)
         };
 
-        BG_PALETTE[0x00]= RGB5(palette_low[pal].r, palette_low[pal].g, palette_low[pal].b);
-        BG_PALETTE[0x01]= RGB5((new_high.r>palette_high[pal].r)? palette_high[pal].r : new_high.r,
+        BG_PALETTE[0x01]= RGB5(palette_low[pal].r, palette_low[pal].g, palette_low[pal].b);
+        BG_PALETTE[0x02]= RGB5((new_high.r>palette_high[pal].r)? palette_high[pal].r : new_high.r,
                                (new_high.g>palette_high[pal].g)? palette_high[pal].g : new_high.g,
                                (new_high.b>palette_high[pal].b)? palette_high[pal].b : new_high.b);
     }
 
+    if (pal == 3) //DMG2 palette has a different BG color
+        BG_PALETTE[0x00]= RGB5(palette_bg[pal].r, palette_bg[pal].g, palette_bg[pal].b);
+    else
+        BG_PALETTE[0x00]= BG_PALETTE[0x01];
     SPRITE_PALETTE[0x00]= RGB5(31,0,31);
-    SPRITE_PALETTE[0x01]= BG_PALETTE[0x01];
-    SPRITE_PALETTE[0x02]= BG_PALETTE[0x00];
+    SPRITE_PALETTE[0x01]= BG_PALETTE[0x02];
+    SPRITE_PALETTE[0x02]= BG_PALETTE[0x01];
     SPRITE_PALETTE[0x10]= RGB5(0,31,0);
-    SPRITE_PALETTE[0x11]= BG_PALETTE[0x00];
-    SPRITE_PALETTE[0x12]= BG_PALETTE[0x01];
+    SPRITE_PALETTE[0x11]= BG_PALETTE[0x01];
+    SPRITE_PALETTE[0x12]= BG_PALETTE[0x02];
 }
 
 IWRAM_CODE ARM_CODE
 void host_vram_write(register uint32_t ofs, register uint8_t data)
 {
-    GFX_MAP_CHR_ADR[(ofs<<2)+3]= (((data>>7)&1)<<8)|((data>>6)&1),
-    GFX_MAP_CHR_ADR[(ofs<<2)+2]= (((data>>5)&1)<<8)|((data>>4)&1),
-    GFX_MAP_CHR_ADR[(ofs<<2)+1]= (((data>>3)&1)<<8)|((data>>2)&1),
-    GFX_MAP_CHR_ADR[(ofs<<2)]= (((data>>1)&1)<<8)|((data)&1);
+    GFX_MAP_CHR_ADR[(ofs<<2)+3]= ((((data>>7)&1)+1)<<8)|(((data>>6)&1)+1),
+    GFX_MAP_CHR_ADR[(ofs<<2)+2]= ((((data>>5)&1)+1)<<8)|(((data>>4)&1)+1),
+    GFX_MAP_CHR_ADR[(ofs<<2)+1]= ((((data>>3)&1)+1)<<8)|(((data>>2)&1)+1),
+    GFX_MAP_CHR_ADR[(ofs<<2)]= ((((data>>1)&1)+1)<<8)|(((data)&1)+1);
 }
 
 IWRAM_CODE ARM_CODE
