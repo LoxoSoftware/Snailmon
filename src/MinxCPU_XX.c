@@ -23,6 +23,9 @@
 #include <gba.h>
 #include "MinxCPU_noInline.h"
 
+#pragma GCC push_options
+#pragma GCC optimize ("O2")
+
 IWRAM_CODE ARM_CODE
 int MinxCPU_Exec(void)
 {
@@ -3203,3 +3206,5 @@ int MinxCPU_ExecCF(void)
 			return 4;
 	}
 }
+
+#pragma GCC pop_options

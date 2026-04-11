@@ -234,6 +234,9 @@ int MinxCPU_ExecSPCF(void);
 
 // Instructions Macros
 
+#pragma GCC push_options
+#pragma GCC optimize ("O1")
+
 IWRAM_CODE ARM_CODE
  uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
 {
@@ -797,5 +800,7 @@ IWRAM_CODE ARM_CODE
 		if (MinxCPU.HL.B.L & 0x80) MinxCPU.F |= MINX_FLAG_SIGN;
 	} else MinxCPU.F |= (MINX_FLAG_OVERFLOW | MINX_FLAG_SIGN);
 }
+
+#pragma GCC pop_options
 
 #endif
