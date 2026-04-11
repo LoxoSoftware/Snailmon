@@ -82,6 +82,7 @@ enum
     VREG_PRC_CNT=       0x8A,
     VREG_LCD_CTRL=      0xFE,
     //Fake registers
+    VREG_PRC_PALETTE=   0x8B,
     VREG_PRC_MODE_OLD=  0x90,
     VREG_IO_DATA_OLD=   0x91,
 };

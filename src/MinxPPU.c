@@ -63,40 +63,51 @@ typedef struct
     int8_t b;
 } rgb_t;
 
-const rgb_t palette_low= (rgb_t){ 4, 6, 4 };
-const rgb_t palette_high= (rgb_t){ 24, 26, 24 };
+const rgb_t palette_low[3]= {
+    (rgb_t){ 4, 6, 4 }, //LCD palette
+    (rgb_t){ 0, 0, 0 }, //B&W palette
+    (rgb_t){ 4, 8, 0 }, //DMG palette
+};
+const rgb_t palette_high[3]= {
+    (rgb_t){ 24, 26, 24 }, //LCD palette
+    (rgb_t){ 31, 31, 31 }, //B&W palette
+    (rgb_t){ 30, 31,  0 }, //DMG palette
+};
 
 void prc_build_palette()
 {
     //Contrast is from 0 to 64 with a negative value representing inversion state
+    uint8_t pal= MinxRegs[VREG_PRC_PALETTE]&3;
+
+    int new_contrast= lcd_contrast/1.5;
 
     if (!lcd_invert)
     {
         rgb_t new_low= (rgb_t)
         {
-            palette_high.r-(lcd_contrast/2),
-            palette_high.g-(lcd_contrast/2),
-            palette_high.b-(lcd_contrast/2)
+            palette_high[pal].r-(new_contrast),
+            palette_high[pal].g-(new_contrast),
+            palette_high[pal].b-(new_contrast)
         };
 
-        BG_PALETTE[0x01]= RGB5((new_low.r<palette_low.r)? palette_low.r : new_low.r,
-                               (new_low.g<palette_low.g)? palette_low.g : new_low.g,
-                               (new_low.b<palette_low.b)? palette_low.b : new_low.b);
-        BG_PALETTE[0x00]= RGB5(palette_high.r, palette_high.g, palette_high.b);
+        BG_PALETTE[0x01]= RGB5((new_low.r<palette_low[pal].r)? palette_low[pal].r : new_low.r,
+                               (new_low.g<palette_low[pal].g)? palette_low[pal].g : new_low.g,
+                               (new_low.b<palette_low[pal].b)? palette_low[pal].b : new_low.b);
+        BG_PALETTE[0x00]= RGB5(palette_high[pal].r, palette_high[pal].g, palette_high[pal].b);
     }
     else
     {
         rgb_t new_high= (rgb_t)
         {
-            palette_low.r+(lcd_contrast/2),
-            palette_low.g+(lcd_contrast/2),
-            palette_low.b+(lcd_contrast/2)
+            palette_low[pal].r+(new_contrast),
+            palette_low[pal].g+(new_contrast),
+            palette_low[pal].b+(new_contrast)
         };
 
-        BG_PALETTE[0x00]= RGB5(palette_low.r, palette_low.g, palette_low.b);
-        BG_PALETTE[0x01]= RGB5((new_high.r>palette_high.r)? palette_high.r : new_high.r,
-                               (new_high.g>palette_high.g)? palette_high.g : new_high.g,
-                               (new_high.b>palette_high.b)? palette_high.b : new_high.b);
+        BG_PALETTE[0x00]= RGB5(palette_low[pal].r, palette_low[pal].g, palette_low[pal].b);
+        BG_PALETTE[0x01]= RGB5((new_high.r>palette_high[pal].r)? palette_high[pal].r : new_high.r,
+                               (new_high.g>palette_high[pal].g)? palette_high[pal].g : new_high.g,
+                               (new_high.b>palette_high[pal].b)? palette_high[pal].b : new_high.b);
     }
 
     SPRITE_PALETTE[0x00]= RGB5(31,0,31);

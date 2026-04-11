@@ -123,6 +123,10 @@ void minx_set_reg(int reg, uint8_t data)
         case VREG_SEC_CNT_LO: case VREG_SEC_CNT_MID: case VREG_SEC_CNT_HI:
             //Read-only register
             return;
+        case VREG_PRC_PALETTE:
+            MinxRegs[reg]= data;
+            prc_build_palette();
+            return;
         case 0x90: case 0x91:
             return;
         default:
