@@ -26,6 +26,8 @@
 #include <gba_base.h>
 #include "oflags.h"
 
+extern uint8_t minx_ram[];
+
 //#define _BIG_ENDIAN
 
 #ifdef _BIG_ENDIAN
@@ -529,14 +531,16 @@ IWRAM_CODE ARM_CODE
  void MinxCPU_PUSH(uint8_t A)
 {
 	MinxCPU.SP.W.L--;
-	MinxCPU_OnWrite(1, MinxCPU.SP.D, A);
+	minx_ram[(MinxCPU.SP.D-0x1000)&0x0FFF]= A;
+	//MinxCPU_OnWrite(1, MinxCPU.SP.D, A);
 }
 
 IWRAM_CODE ARM_CODE
  uint8_t MinxCPU_POP(void)
 {
 	register uint8_t data;
-	data = MinxCPU_OnRead(1, MinxCPU.SP.D);
+	//data = MinxCPU_OnRead(1, MinxCPU.SP.D);
+	data= minx_ram[(MinxCPU.SP.D-0x1000)&0x0FFF];
 	MinxCPU.SP.W.L++;
 	return data;
 }
