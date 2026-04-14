@@ -18,7 +18,6 @@
 
 #include <gba.h>
 #include "include.h"
-#include "rtc.h"
 
 //uint8_t MinxRegs[256];
 uint8_t* MinxRegs= (u8*)(EWRAM+0x1100);

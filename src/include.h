@@ -23,3 +23,4 @@
 #include "MinxPPU.h"
 #include "MinxIO.h"
 #include "registers.h"
+#include "rtc.h"

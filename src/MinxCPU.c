@@ -30,7 +30,7 @@ TMinxCPU MinxCPU;
 EWRAM_DATA uint8_t minx_ram[4096];
 
 extern bool block_vblank_irq;
-//extern uint8_t option_thread_safety;
+extern uint8_t option_cart_rtc;
 
 //
 // Functions
@@ -310,6 +310,16 @@ void MinxCPU_OnSleep(int type)
 	irqDisable(IRQ_VCOUNT);
 	irqDisable(IRQ_TIMER3);
 
+	datetime_t dt;
+	uint32_t seconds_before= 0, seconds_after= 0;
+
+	if (option_cart_rtc)
+	{
+		dt= get_datetime();
+		seconds_before= //Will only keep track of time until next month
+			dt.second + dt.minute*60 + dt.hour*3600 + dt.day*86400;
+	}
+
 	uint16_t kh= 0;
 	do
 	{
@@ -332,6 +342,21 @@ void MinxCPU_OnSleep(int type)
 	irqEnable(IRQ_VBLANK);
 	REG_DISPCNT= (REG_DISPCNT&0xFF7F);
 	irqDisable(IRQ_KEYPAD);
+
+	if (option_cart_rtc)
+	{
+		//Compute the number of seconds passed while asleep and update the second counter
+		dt= get_datetime();
+		seconds_after=
+			dt.second + dt.minute*60 + dt.hour*3600 + dt.day*86400;
+		uint32_t seconds_total=
+			(MinxRegs[VREG_SEC_CNT_LO]&0xFF) + ((MinxRegs[VREG_SEC_CNT_MID]<<8)&0xFF)
+			+ ((MinxRegs[VREG_SEC_CNT_HI]<16)&0xFF) + (seconds_after - seconds_before);
+
+		MinxRegs[VREG_SEC_CNT_LO]= seconds_total&0xFF;
+		MinxRegs[VREG_SEC_CNT_MID]= (seconds_total>>8)&0xFF;
+		MinxRegs[VREG_SEC_CNT_HI]= (seconds_total>>16)&0xFF;
+	}
 
 	//MinxCPU.Status = MINX_STATUS_NORMAL;
 	//SoftReset(0);
