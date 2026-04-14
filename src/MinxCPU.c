@@ -302,11 +302,13 @@ void MinxCPU_OnException(int type, uint32_t opc)
 		VBlankIntrWait();
 	}
 }
+
 void MinxCPU_OnSleep(int type)
 {
 	//Enter sleep mode
 	irqDisable(IRQ_VBLANK);
 	irqDisable(IRQ_VCOUNT);
+	irqDisable(IRQ_TIMER3);
 
 	uint16_t kh= 0;
 	do
@@ -334,6 +336,7 @@ void MinxCPU_OnSleep(int type)
 	//MinxCPU.Status = MINX_STATUS_NORMAL;
 	//SoftReset(0);
 }
+
 void MinxCPU_OnIRQHandle(uint8_t flag, uint8_t shift_u)
 {
 	//BG_PALETTE[0]= 0x0000;
@@ -355,6 +358,7 @@ void MinxCPU_OnIRQHandle(uint8_t flag, uint8_t shift_u)
 	// 	VBlankIntrWait();
 	// }
 }
+
 void MinxCPU_OnIRQAct(uint8_t intr)
 {
 	consoleDemoInit();

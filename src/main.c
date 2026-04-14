@@ -173,7 +173,7 @@ void isr_display()
         MinxRegs[VREG_PRC_MODE_OLD]= MinxRegs[VREG_PRC_MODE];
     }
 
-    if (frames == 59)
+    if (frames >= 59)
     {
         reg_sec_counter_increment();
         frames= 0;
