@@ -18,6 +18,7 @@
 
 #include <gba.h>
 #include "include.h"
+#include "rtc.h"
 
 //uint8_t MinxRegs[256];
 uint8_t* MinxRegs= (u8*)(EWRAM+0x1100);
@@ -26,6 +27,8 @@ extern uint8_t irq_act1_pending;
 extern uint8_t irq_act2_pending;
 extern uint8_t irq_act3_pending;
 extern uint8_t irq_act4_pending;
+
+extern uint8_t option_cart_rtc;
 
 void minx_set_reg(int reg, uint8_t data)
 {
@@ -99,6 +102,16 @@ void minx_set_reg(int reg, uint8_t data)
         case VREG_SEC_CNT_LO: case VREG_SEC_CNT_MID: case VREG_SEC_CNT_HI:
             //Read-only register
             return;
+        case VREG_SYS_CTRL3:
+            MinxRegs[reg]= data;
+            if (option_cart_rtc)
+            {
+                //Load the host RTC if guest RTC is flagged as invalid
+                if (!(data&0x02))
+                    set_timestamp_rtc();
+            }
+            return;
+        /// Fake registers ///
         case VREG_PRC_PALETTE:
             MinxRegs[reg]= data;
             prc_build_palette();

@@ -41,6 +41,7 @@ const u16* bios_irq_vect= (u16*)bios_bin;
 uint8_t option_mask_screen= 1;
 uint8_t option_72hz_refresh= 0;
 uint8_t option_thread_safety= 1; //0= Off, 1= Fast, 2= Safe
+uint8_t option_cart_rtc= 1;
 
 const uint8_t PM_IO_INIT[256] = {
 	0x7F, 0x20, 0x5C, 0xff, 0xff, 0xff, 0xff, 0xff, // $00~$07 System Control
@@ -244,7 +245,7 @@ void ui_draw_string(int x, int y, const char* str)
 void go_menu()
 {
     int sel= 0;
-    const int options= 4;
+    const int options= 5;
 
     ui_init();
     ui_clear();
@@ -253,10 +254,11 @@ void go_menu()
     ui_draw_string(1,options+3, "Press START to sleep#");
 
     const char* menu_elems[]= {
-        "MASK DISPLAY # OFF#  ON##",
-        "PALETTE      # LCD# B&W#DMG1#DMG2##",
-        "FRAME DIVIDER#30HZ#36HZ##",
-        "THREAD SAFETY# OFF#FAST#SAFE#"
+        "MASK DISPLAY # OFF#  ON#",
+        "PALETTE      # LCD# B&W#DMG1#DMG2#",
+        "FRAME DIVIDER#30HZ#36HZ#",
+        "THREAD SAFETY# OFF#FAST#SAFE#",
+        "CARTRIDGE RTC# OFF#  ON#",
     };
     u8* menu_varptr[]=
     {
@@ -264,6 +266,7 @@ void go_menu()
         &MinxRegs[VREG_PRC_PALETTE],
         &option_72hz_refresh,
         &option_thread_safety,
+        &option_cart_rtc,
     };
     const int menu_choices_len[]=
     {
@@ -271,6 +274,7 @@ void go_menu()
         4,
         2,
         3,
+        2,
     };
     int menu_elems_len= sizeof(menu_elems)/sizeof(char*);
 
