@@ -185,8 +185,6 @@ void isr_vcount()
 IWRAM_CODE ARM_CODE
 void prc_on_map_addr_change()
 {
-    REG_IME= 0;
-
     int tofs=   ((MinxRegs[VREG_PRC_MAP_LO])|
                 (MinxRegs[VREG_PRC_MAP_MID]<<8)|
                 (MinxRegs[VREG_PRC_MAP_HI]<<16));
@@ -217,14 +215,11 @@ prc_bg_tile_copy_done:
     REG_BG2CNT= (REG_BG2CNT&0b1111111111110011)|CHAR_BASE(prc_bg_tile_base);
 
     prc_pending_updates &= 0b11111110;
-    REG_IME= 1;
 }
 
 void prc_on_oam_update(int sprid);
 void prc_on_spr_addr_change()
 {
-    REG_IME= 0;
-
     int tofs=   ((MinxRegs[VREG_PRC_SPR_LO])|
                 (MinxRegs[VREG_PRC_SPR_MID]<<8)|
                 (MinxRegs[VREG_PRC_SPR_HI]<<16));
@@ -295,7 +290,6 @@ prc_spr_tile_copy_done:
 #endif
 
     prc_pending_updates &= 0b11111001;
-    REG_IME= 1;
 }
 
 IWRAM_CODE ARM_CODE
