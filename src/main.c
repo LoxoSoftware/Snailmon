@@ -106,7 +106,7 @@ IWRAM_CODE ARM_CODE
 void isr_display()
 {
     irqDisable(IRQ_VBLANK);
-    //irqDisable(IRQ_TIMER3);
+    irqDisable(IRQ_TIMER3);
 
     REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
     REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
