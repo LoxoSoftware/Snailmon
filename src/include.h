@@ -16,6 +16,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <string.h>
+#include <gba_base.h>
+#include <gba_video.h>
+#include <gba_timers.h>
+#include <gba_interrupt.h>
+#include <gba_input.h>
+#include <gba_sprites.h>
+#include <gba_systemcalls.h>
 #include "oflags.h"
 #include "rom_bin.h"
 #include "bios_bin.h"

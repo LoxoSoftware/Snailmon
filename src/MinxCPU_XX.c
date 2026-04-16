@@ -20,7 +20,6 @@
 
 // Note: Any write to MinxCPU.HL.B.I needs to be reflected into MinxCPU.N.B.I
 
-#include <gba.h>
 #include "MinxCPU_noInline.h"
 
 #pragma GCC push_options

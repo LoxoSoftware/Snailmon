@@ -16,7 +16,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <gba.h>
 #include "include.h"
 
 //uint8_t MinxRegs[256];

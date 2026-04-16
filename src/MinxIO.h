@@ -19,8 +19,6 @@
 #ifndef MINXIO_H
 #define MINXIO_H
 
-#include <gba.h>
-
 #define EEPROM      ((u8*)SRAM)
 
 typedef enum

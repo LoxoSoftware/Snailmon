@@ -16,8 +16,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <gba.h>
-#include <string.h>
 #include "include.h"
 #include "interrupt.h"
 #include "ui.h"

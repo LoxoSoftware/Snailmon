@@ -18,9 +18,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <stdint.h>
-#include <gba.h>
 #include "include.h"
 
 #define GFX_SZ_TOLERANCE	1024
@@ -272,35 +269,7 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 
 void MinxCPU_OnException(int type, uint32_t opc)
 {
-	consoleDemoInit();
 
-	irqEnable(IRQ_VBLANK);
-	irqSet(IRQ_VBLANK, NULL);
-
-	iprintf(":(\nYour PM ran into a problem and needs to restart.\nHere's what has gone wrong:\n\n");
-
-	switch (type)
-	{
-		case EXCEPTION_UNKNOWN_INSTRUCTION:
-			iprintf("UNKNOWN INSTRUCTION");
-			break;
-		case EXCEPTION_CRASH_INSTRUCTION:
-			iprintf("CRASH INSTRUCTION");
-			break;
-		case EXCEPTION_UNSTABLE_INSTRUCTION:
-			iprintf("UNSTABLE INSTRUCTION");
-			break;
-		case EXCEPTION_DIVISION_BY_ZERO:
-			iprintf("DIVISION BY ZERO");
-			break;
-	}
-
-	iprintf("\nOP:0x%lx\nPC:0x%x", opc, MinxCPU.PC.W.L|(MinxCPU.PC.W.H<<16));
-
-	while(1)
-	{
-		VBlankIntrWait();
-	}
 }
 
 void MinxCPU_OnSleep(int type)
@@ -364,37 +333,10 @@ void MinxCPU_OnSleep(int type)
 
 void MinxCPU_OnIRQHandle(uint8_t flag, uint8_t shift_u)
 {
-	//BG_PALETTE[0]= 0x0000;
-	// ((uint8_t*)EWRAM)[0x1010]= 'I';
-	// ((uint8_t*)EWRAM)[0x1011]= 'R';
-	// ((uint8_t*)EWRAM)[0x1012]= 'Q';
-	// ((uint8_t*)EWRAM)[0x1013]= flag;
-	//VBlankIntrWait();
-	//BG_PALETTE[0]= RGB5(24,28,24);
-	// consoleDemoInit();
- //
-	// irqEnable(IRQ_VBLANK);
-	// irqSet(IRQ_VBLANK, NULL);
- //
-	// iprintf("IRQ");
- //
-	// while(1)
-	// {
-	// 	VBlankIntrWait();
-	// }
+
 }
 
 void MinxCPU_OnIRQAct(uint8_t intr)
 {
-	consoleDemoInit();
 
-	irqEnable(IRQ_VBLANK);
-	irqSet(IRQ_VBLANK, NULL);
-
-	iprintf("Int ACT");
-
-	while(1)
-	{
-		VBlankIntrWait();
-	}
 }
