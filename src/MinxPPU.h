@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define vSCREEN_XOFS    24
+#define vSCREEN_YOFS    16
+
 #define vSCREEN_WIDTH   96
 #define vSCREEN_HEIGHT  64
 

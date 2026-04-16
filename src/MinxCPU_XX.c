@@ -24,7 +24,7 @@
 #include "MinxCPU_noInline.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("Os")
 
 IWRAM_CODE ARM_CODE
 int MinxCPU_Exec(void)
@@ -1067,7 +1067,7 @@ int MinxCPU_Exec(void)
 	}
 }
 
-THUMB_CODE
+IWRAM_CODE THUMB_CODE
 int MinxCPU_ExecCE(void)
 {
 	uint8_t I8A;
@@ -2194,7 +2194,7 @@ int MinxCPU_ExecSPCE(void)
 	}
 }
 
-THUMB_CODE
+IWRAM_CODE THUMB_CODE
 int MinxCPU_ExecSPCF(void)
 {
 	// Read IR
@@ -2423,7 +2423,7 @@ int MinxCPU_ExecSPCF(void)
 	}
 }
 
-THUMB_CODE
+IWRAM_CODE THUMB_CODE
 int MinxCPU_ExecCF(void)
 {
 	uint8_t I8A;

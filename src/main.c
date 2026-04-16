@@ -22,9 +22,6 @@
 #include "interrupt.h"
 #include "ui.h"
 
-#define vSCREEN_XOFS        24
-#define vSCREEN_YOFS        16
-
 #define UI_TILE_INDEX       1
 
 #define CPU_DEBUG_MEMBASE   0x1000 //Offset in EWRAM
@@ -32,7 +29,7 @@
 extern TMinxCPU MinxCPU;
 extern u8 minx_ram[];
 
-uint32_t frames= 0;
+uint8_t frames= 0;
 bool block_vblank_irq= false;
 uint8_t block_vblank_irq_frames= 0;
 
@@ -78,6 +75,9 @@ const uint8_t PM_IO_INIT[256] = {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x40, 0xFF  // $F8~$FF LCD I/O
 };
 
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 IWRAM_CODE ARM_CODE
 void isr_prc_copy_complete()
 {
@@ -108,8 +108,8 @@ void isr_display()
     irqDisable(IRQ_VBLANK);
     irqDisable(IRQ_TIMER3);
 
-    REG_BG2X= ((-8+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
-    REG_BG2Y= (-12+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
+    REG_BG2X= ((-(vSCREEN_YOFS>>1)+(MinxRegs[VREG_PRC_SCROLL_Y]&0x7F))<<8);
+    REG_BG2Y= (-(vSCREEN_XOFS>>1)+(MinxRegs[VREG_PRC_SCROLL_X]&0x7F))<<8;
 
     //Set keypad register
     //  MSB Pw|Ri|Le|Do|Up|C|B|A LSB
@@ -186,6 +186,8 @@ void isr_display()
 
     irqEnable(IRQ_VBLANK);
 }
+
+#pragma GCC pop_options
 
 void ui_init()
 {

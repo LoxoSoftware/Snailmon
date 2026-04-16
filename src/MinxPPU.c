@@ -131,7 +131,7 @@ void prc_build_palette()
 }
 
 IWRAM_CODE ARM_CODE
-void host_vram_write(register uint32_t ofs, register uint8_t data)
+void host_vram_write(uint32_t ofs, uint8_t data)
 {
     GFX_MAP_CHR_ADR[(ofs<<2)+3]= ((((data>>7)&1)+1)<<8)|(((data>>6)&1)+1),
     GFX_MAP_CHR_ADR[(ofs<<2)+2]= ((((data>>5)&1)+1)<<8)|(((data>>4)&1)+1),
@@ -152,6 +152,7 @@ void host_vram_write_sprrow_4bpp(uint32_t ofs, uint8_t shade, uint8_t mask)
                                 |((mask&0x80)?0:((shade>>7)&1)+1);
 }
 
+IWRAM_CODE ARM_CODE
 void host_map_write(uint16_t ofs, uint8_t data)
 {
     if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
