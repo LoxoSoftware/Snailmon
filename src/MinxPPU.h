@@ -40,10 +40,10 @@
 
 extern uint8_t minx_ram[];
 
-extern uint16_t lut_mapw[4];
-extern uint16_t lut_maph[4];
-extern uint16_t lut_prc_map_bytes[4];
-extern uint16_t lut_bg_xofs[4];
+extern const uint16_t lut_mapw[4];
+extern const uint16_t lut_maph[4];
+extern const uint16_t lut_prc_map_bytes[4];
+extern const uint16_t lut_bg_xofs[4];
 
 extern uint8_t prc_pending_updates;
 extern uint32_t prc_map_tile_base_cached[2];
