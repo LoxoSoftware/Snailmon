@@ -89,105 +89,6 @@ int MinxCPU_CallIRQ(uint8_t addr)
 	return 1;
 }
 
-#if FAST_READWRITE == 1
-
-#pragma GCC push_options
-#pragma GCC optimize ("O1")
-
-IWRAM_CODE ARM_CODE
-void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
-{
-	switch (addr>>8)
-	{
-		case 0x00: case 0x01: case 0x02: case 0x03:
-		case 0x04: case 0x05: case 0x06: case 0x07:
-		case 0x08: case 0x09: case 0x0A: case 0x0B:
-		case 0x0C: case 0x0D: case 0x0E: case 0x0F:
-			//BIOS (read-only)
-			return;
-		case 0x10: case 0x11: case 0x12:
-			//Work RAM (framebuffer area)
-			minx_ram[addr&0x000FFF]= data;
-			block_vblank_irq= true;
-			if ((MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
-				return;
-			host_vram_write(addr&0x0000FF, data);
-			return;
-		case 0x13: case 0x14:
-			//Work RAM (OAM and map area)
-			minx_ram[addr&0x000FFF]= data;
-			block_vblank_irq= true;
-			if (addr <= 0x00135F) //OAM write
-			{
-				if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_SPR))
-					return;
-
-				prc_on_oam_update(((addr&0x0FFF)-0x300)>>2);
-				return;
-			}
-			else if (addr <= 0x001360+lut_prc_map_bytes[MinxRegs[VREG_PRC_MODE]>>4]) //Map screen write
-			{
-				if (!(MinxRegs[VREG_PRC_MODE]&PRC_MODE_ENA_MAP))
-					return;
-
-				host_map_write((addr&0x0FFF)-0x360, data);
-
-				return;
-			}
-			uint32_t prc_spr_base= (MinxRegs[VREG_PRC_SPR_HI]<<16)|
-									(MinxRegs[VREG_PRC_SPR_MID]<<8)|
-									MinxRegs[VREG_PRC_SPR_LO];
-			if (addr >= prc_spr_base && addr <= prc_spr_base+GFX_SZ_TOLERANCE)
-				//Likely using RAM as a sprite tile base, load the data in VRAM
-				prc_pending_updates |= PRC_QUEUE_COPY_SPR_GFX | PRC_QUEUE_FORCE_UPDATE | PRC_QUEUE_WAIT;
-			return;
-		case 0x15: case 0x16: case 0x17:
-		case 0x18: case 0x19: case 0x1A: case 0x1B:
-		case 0x1C: case 0x1D: case 0x1E: case 0x1F:
-			//Work RAM (general purpose area)
-			minx_ram[addr&0x000FFF]= data;
-			block_vblank_irq= true;
-			return;
-		case 0x20:
-			//Hardware registers
-			minx_set_reg(addr&0x0000FF, data);
-			return;
-		default:
-			//ROM (read-only)
-			return;
-	}
-}
-
-IWRAM_CODE ARM_CODE
-uint8_t MinxCPU_OnRead(int cpu, uint32_t addr)
-{
-	switch (addr>>8)
-	{
-		case 0x00: case 0x01: case 0x02: case 0x03:
-		case 0x04: case 0x05: case 0x06: case 0x07:
-		case 0x08: case 0x09: case 0x0A: case 0x0B:
-		case 0x0C: case 0x0D: case 0x0E: case 0x0F:
-			//BIOS (read-only)
-			return bios_bin[addr&0x0FFF];
-		case 0x10: case 0x11: case 0x12: case 0x13:
-		case 0x14: case 0x15: case 0x16: case 0x17:
-		case 0x18: case 0x19: case 0x1A: case 0x1B:
-		case 0x1C: case 0x1D: case 0x1E: case 0x1F:
-			//Work RAM (general purpose area)
-			return minx_ram[addr&0x0FFF];
-		case 0x20:
-			//Hardware registers
-			return minx_read_reg(addr&0x0000FF);
-		default:
-			//ROM (read-only)
-			return rom_bin[addr&0x1FFFFF];
-	}
-}
-
-#pragma GCC pop_options
-
-#else //!FAST_READWRITE
-
 IWRAM_CODE ARM_CODE
 uint8_t MinxCPU_OnRead(int cpu, uint32_t addr)
 {
@@ -264,8 +165,6 @@ void MinxCPU_OnWrite(int cpu, uint32_t addr, uint8_t data)
 	else
 		return;
 }
-
-#endif //FAST_READWRITE
 
 void MinxCPU_OnException(int type, uint32_t opc)
 {
