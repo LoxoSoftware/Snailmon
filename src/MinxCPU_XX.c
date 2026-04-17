@@ -1066,7 +1066,7 @@ int MinxCPU_Exec(void)
 	}
 }
 
-IWRAM_CODE THUMB_CODE
+IWRAM_CODE ARM_CODE
 int MinxCPU_ExecCE(void)
 {
 	uint8_t I8A;
@@ -2178,7 +2178,7 @@ int MinxCPU_ExecCE(void)
 	}
 }
 
-THUMB_CODE
+IWRAM_CODE ARM_CODE
 int MinxCPU_ExecSPCE(void)
 {
 	// Read IR
@@ -2193,7 +2193,7 @@ int MinxCPU_ExecSPCE(void)
 	}
 }
 
-IWRAM_CODE THUMB_CODE
+IWRAM_CODE ARM_CODE
 int MinxCPU_ExecSPCF(void)
 {
 	// Read IR
@@ -2422,7 +2422,7 @@ int MinxCPU_ExecSPCF(void)
 	}
 }
 
-IWRAM_CODE THUMB_CODE
+IWRAM_CODE ARM_CODE
 int MinxCPU_ExecCF(void)
 {
 	uint8_t I8A;

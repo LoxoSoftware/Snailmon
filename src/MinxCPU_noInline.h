@@ -237,7 +237,7 @@ int MinxCPU_ExecSPCF(void);
 // Instructions Macros
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")
+#pragma GCC optimize ("O2")
 
 IWRAM_CODE ARM_CODE
  uint8_t MinxCPU_ADD8(uint8_t A, uint8_t B)
