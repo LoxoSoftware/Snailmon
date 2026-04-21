@@ -255,9 +255,9 @@ void go_menu()
     const char* menu_elems[]= {
         "MASK DISPLAY # OFF#  ON#",
         "PALETTE      # LCD# B&W#DMG1#DMG2#",
-        "FRAME DIVIDER#30HZ#36HZ#",
+        "VSYNC        #  ON# OFF#",
         "THREAD SAFETY# OFF#FAST#SAFE#",
-        "CARTRIDGE RTC# OFF#  ON#",
+        "RTC SUPPORT  # OFF#  ON#",
     };
     u8* menu_varptr[]=
     {
