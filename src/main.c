@@ -88,7 +88,6 @@ void isr_prc_copy_complete()
     }
     block_vblank_irq_frames= 0;
 
-    //if (MinxRegs[VREG_PRC_MODE]&0x04) //Only if PRC copy is enabled
     if (frames&1)
     {
         send_irq(VIRQ_PRC_COPY_DONE);

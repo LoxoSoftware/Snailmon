@@ -78,85 +78,85 @@ void send_irq(int irq)
     switch (irq)
     {
         case VIRQ_PRC_COPY_DONE:
-            if (MinxRegs[VREG_IRQ_ENA1]&0x80)
+            if (MinxRegs[VREG_IRQ_ENA1]&0x80 && MinxRegs[VREG_IRQ_PRI1]&0xC0)
                 MinxCPU_CallIRQ(VIRQ_PRC_COPY_DONE<<1);
             else
                 irq_act(1, 0x80);
         return;
         case VIRQ_PRC_FRAMEDIV_OF:
-            if (MinxRegs[VREG_IRQ_ENA1]&0x40)
+            if (MinxRegs[VREG_IRQ_ENA1]&0x40 && MinxRegs[VREG_IRQ_PRI1]&0xC0)
                 MinxCPU_CallIRQ(VIRQ_PRC_FRAMEDIV_OF<<1);
             else
                 irq_act(1, 0x40);
         return;
         case VIRQ_TMR2_UPPER_UF:
-            if (MinxRegs[VREG_IRQ_ENA1]&0x20)
+            if (MinxRegs[VREG_IRQ_ENA1]&0x20 && MinxRegs[VREG_IRQ_PRI1]&0x30)
                 MinxCPU_CallIRQ(VIRQ_TMR2_UPPER_UF<<1);
             else
                 irq_act(1, 0x20);
         return;
         case VIRQ_TMR256_2HZ:
-            if (MinxRegs[VREG_IRQ_ENA2]&0x08)
+            if (MinxRegs[VREG_IRQ_ENA2]&0x08 && MinxRegs[VREG_IRQ_PRI2]&0xC0)
                 MinxCPU_CallIRQ(VIRQ_TMR256_2HZ<<1);
             else
                 irq_act(2, 0x08);
         return;
         case VIRQ_CART_EJECT:
-            if (MinxRegs[VREG_IRQ_ENA2]&0x02)
+            if (MinxRegs[VREG_IRQ_ENA2]&0x02 && MinxRegs[VREG_IRQ_PRI2]&0x30)
                 MinxCPU_CallIRQ(VIRQ_CART_EJECT<<1);
             else
                 irq_act(2, 0x02);
         return;
         case VIRQ_INPUT_KEY_A:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x01)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x01 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_A<<1);
             else
                 irq_act(3, 0x01);
         return;
         case VIRQ_INPUT_KEY_B:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x02)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x02 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_B<<1);
             else
                 irq_act(3, 0x02);
         return;
         case VIRQ_INPUT_KEY_C:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x04)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x04 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_C<<1);
             else
                 irq_act(3, 0x04);
         return;
         case VIRQ_INPUT_KEY_UP:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x08)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x08 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_UP<<1);
             else
                 irq_act(3, 0x08);
         return;
         case VIRQ_INPUT_KEY_DOWN:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x10)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x10 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_DOWN<<1);
             else
                 irq_act(3, 0x10);
         return;
         case VIRQ_INPUT_KEY_LEFT:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x20)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x20 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_LEFT<<1);
             else
                 irq_act(3, 0x20);
         return;
         case VIRQ_INPUT_KEY_RIGHT:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x40)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x40 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_RIGHT<<1);
             else
                 irq_act(3, 0x40);
         return;
         case VIRQ_INPUT_KEY_POWER:
-            if (MinxRegs[VREG_IRQ_ENA3]&0x80)
+            if (MinxRegs[VREG_IRQ_ENA3]&0x80 && MinxRegs[VREG_IRQ_PRI2]&0x0C)
                 MinxCPU_CallIRQ(VIRQ_INPUT_KEY_POWER<<1);
             else
                 irq_act(3, 0x80);
         return;
         case VIRQ_INPUT_SHOCK:
-            if (MinxRegs[VREG_IRQ_ENA4]&0x40)
+            if (MinxRegs[VREG_IRQ_ENA4]&0x40 && MinxRegs[VREG_IRQ_PRI3]&0x03)
                 MinxCPU_CallIRQ(VIRQ_INPUT_SHOCK<<1);
             else
                 irq_act(4, 0x40);
